@@ -1,0 +1,190 @@
+/* App specific styles */
+
+/* 移动端优化 */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+}
+
+/* 自定义地图标记图标 */
+.custom-marker-icon {
+  background: transparent;
+  border: none;
+}
+
+/* Leaflet map container */
+.leaflet-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  touch-action: pan-x pan-y;
+}
+
+/* Leaflet popup styling - 移动端优化 */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 8px 10px !important;
+  min-width: 200px;
+  font-size: 14px;
+}
+
+/* 紧凑型弹窗样式 */
+.compact-popup .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+}
+
+.compact-popup .leaflet-popup-content {
+  margin: 0 !important;
+  width: 260px !important;
+}
+
+/* 移动端触摸优化 */
+.leaflet-control-zoom a {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  font-size: 20px;
+}
+
+/* Ant Design 移动端优化 */
+.ant-drawer-body {
+  padding: 16px;
+}
+
+.ant-list-item {
+  padding: 12px 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .ant-statistic-title {
+    font-size: 12px;
+  }
+  
+  .ant-statistic-content {
+    font-size: 18px;
+  }
+}
+
+/* 点聚合样式 */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background-color: rgba(24, 144, 255, 0.6);
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background-color: rgba(24, 144, 255, 0.8);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.marker-cluster {
+  background-clip: padding-box;
+  border-radius: 50%;
+}
+
+.marker-cluster div {
+  width: 30px;
+  height: 30px;
+  margin-left: 5px;
+  margin-top: 5px;
+  text-align: center;
+  border-radius: 50%;
+  font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-cluster-small {
+  background-color: rgba(24, 144, 255, 0.4);
+}
+
+.marker-cluster-small div {
+  background-color: rgba(24, 144, 255, 0.7);
+}
+
+.marker-cluster-medium {
+  background-color: rgba(22, 119, 255, 0.4);
+}
+
+.marker-cluster-medium div {
+  background-color: rgba(22, 119, 255, 0.7);
+}
+
+.marker-cluster-large {
+  background-color: rgba(13, 71, 161, 0.4);
+}
+
+.marker-cluster-large div {
+  background-color: rgba(13, 71, 161, 0.7);
+}
+
+/* 测量模式下的光标样式 */
+.leaflet-container.measure-active {
+  cursor: crosshair !important;
+}
+
+.leaflet-container.measure-active .leaflet-marker-icon {
+  cursor: crosshair !important;
+}
+
+/* 测量结果提示框样式 */
+.measurement-tooltip.leaflet-tooltip {
+  background-color: white;
+  border: 2px solid #1890ff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  z-index: 1000 !important;
+  pointer-events: none;
+}
+
+.measurement-tooltip.leaflet-tooltip::before {
+  display: none;
+}
+
+/* 确保测量 tooltip 在最上层 */
+.leaflet-pane.leaflet-tooltip-pane {
+  z-index: 650 !important;
+}
+
+/* 测量模式下的测量线 tooltip 优先级最高 */
+.leaflet-overlay-pane .measurement-tooltip {
+  z-index: 1000 !important;
+}
+
+/* 点位标签的 z-index 较低 */
+.leaflet-marker-pane .leaflet-tooltip {
+  z-index: 600 !important;
+}
+
+/* 测量模式下点位标签半透明，避免干扰 */
+.measure-active .leaflet-marker-pane .leaflet-tooltip {
+  opacity: 0.6 !important;
+}
+
+/* 禁用版权信息中的链接点击 */
+.leaflet-control-attribution a {
+  pointer-events: none !important;
+  cursor: default !important;
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+/* 网格模式下隐藏版权信息 */
+.grid-mode .leaflet-control-attribution {
+  display: none !important;
+}
+
+/* 底图切换动画 */
+.basemap-layer {
+  transition: opacity 300ms ease-in-out !important;
+}

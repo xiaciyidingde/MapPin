@@ -1,0 +1,5 @@
+<script>alert('XSS')</script>,,100.0,200.0,50.0
+<img src=x onerror=alert('XSS')>,,150.0,250.0,60.0
+<svg onload=alert('XSS')>,,160.0,260.0,70.0
+javascript:alert('XSS'),,170.0,270.0,80.0
+"><script>alert('XSS')</script>,,180.0,280.0,90.0

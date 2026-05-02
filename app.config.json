@@ -1,0 +1,65 @@
+{
+  "app": {
+    "name": "MapPin",
+    "description": "测量数据管理与可视化工具"
+  },
+  "author": {
+    "show": true,
+    "showLinks": true,
+    "links": [
+      {
+        "title": "GitHub",
+        "url": "https://github.com/xiaciyidingde",
+        "icon": "github",
+        "description": "github.com/xiaciyidingde"
+      }
+    ]
+  },
+  "coordinate": {
+    "defaultSystem": "CGCS2000",
+    "defaultProjection": "gauss-3",
+    "defaultCentralMeridian": 114,
+    "centralMeridianRange": {
+      "min": 75,
+      "max": 135
+    }
+  },
+  "map": {
+    "defaultCenter": {
+      "lat": 35.0,
+      "lng": 105.0
+    },
+    "defaultZoom": 5,
+    "minZoom": 3,
+    "maxZoom": 18,
+    "defaultTileSource": "osm",
+    "cluster": {
+      "radius": 60,
+      "maxZoom": 16
+    },
+    "tianDiTuTokens": []
+  },
+  "file": {
+    "maxSizeMB": 50,
+    "allowedTypes": ["dat"],
+    "allowedExtensions": ".dat"
+  },
+  "performance": {
+    "largeFileThreshold": 1000,
+    "virtualScrollThreshold": 100,
+    "maxPointsPerFile": 2000
+  },
+  "detection": {
+    "hrmsThreshold": 0.05,
+    "vrmsThreshold": 0.05,
+    "duplicateCoordinateTolerance": 0.001,
+    "isolatedPointRangeMultiplier": 10
+  },
+  "recycleBin": {
+    "maxCapacity": 10000
+  },
+  "search": {
+    "debounceDelay": 300,
+    "minLength": 1
+  }
+}

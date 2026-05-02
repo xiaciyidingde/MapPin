@@ -1,0 +1,5 @@
+test\u0000null,,100.0,200.0,50.0
+test\u202E\u202Dreverse,,150.0,250.0,60.0
+test\uFEFFbom,,160.0,260.0,70.0
+test\u200Bzwsp,,170.0,270.0,80.0
+test\uFFFDreplacement,,180.0,280.0,90.0

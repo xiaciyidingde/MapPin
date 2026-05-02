@@ -1,0 +1,66 @@
+# Netlify 配置文件
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA 路由支持
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 安全头配置
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Content Security Policy
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https: blob: https://t0.tianditu.gov.cn https://t1.tianditu.gov.cn https://t2.tianditu.gov.cn https://t3.tianditu.gov.cn https://t4.tianditu.gov.cn https://t5.tianditu.gov.cn https://t6.tianditu.gov.cn https://t7.tianditu.gov.cn https://*.tile.openstreetmap.org; font-src 'self' data:; connect-src 'self' https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://t0.tianditu.gov.cn https://t1.tianditu.gov.cn https://t2.tianditu.gov.cn https://t3.tianditu.gov.cn https://t4.tianditu.gov.cn https://t5.tianditu.gov.cn https://t6.tianditu.gov.cn https://t7.tianditu.gov.cn; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    
+    # 防止点击劫持
+    X-Frame-Options = "DENY"
+    
+    # 防止 MIME 类型嗅探
+    X-Content-Type-Options = "nosniff"
+    
+    # XSS 保护
+    X-XSS-Protection = "1; mode=block"
+    
+    # Referrer 策略
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # 权限策略
+    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=()"
+    
+    # 强制 HTTPS
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+# 不缓存 HTML 文件
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# 长期缓存 JavaScript 和 CSS 文件（带 hash）
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 长期缓存图片和字体
+[[headers]]
+  for = "/*.@(jpg|jpeg|png|gif|svg|webp|ico|woff|woff2|ttf|eot)"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 不缓存 Service Worker
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# 短期缓存 Manifest
+[[headers]]
+  for = "/*.@(json|webmanifest)"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
