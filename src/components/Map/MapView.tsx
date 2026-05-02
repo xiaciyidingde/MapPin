@@ -197,6 +197,13 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
             </Tag>
           </div>
 
+          {/* 编码信息 */}
+          {point.code && (
+            <div style={{ fontSize: 12, color: '#999', marginTop: 4, marginBottom: 4 }}>
+              编码: {point.code}
+            </div>
+          )}
+
           {/* 坐标信息和操作按钮 */}
           <div style={{ display: 'flex', gap: 8 }}>
             {/* 左侧：坐标信息 */}

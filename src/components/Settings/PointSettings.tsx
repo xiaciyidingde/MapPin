@@ -384,10 +384,17 @@ export function PointSettings() {
                       </Tag>
                     </div>
                     
+                    {/* 编码 - 单独一行 */}
+                    {point.code && (
+                      <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
+                        编码: {point.code}
+                      </div>
+                    )}
+                    
                     {/* 原始点号 - 单独一行 */}
                     {point.originalPointNumber && point.originalPointNumber !== point.pointNumber && (
                       <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
-                        原: {point.originalPointNumber}
+                        原名: {point.originalPointNumber}
                       </div>
                     )}
 

@@ -18,6 +18,7 @@ export interface MeasurementPoint {
   fileId: string;
   pointNumber: string;
   originalPointNumber: string; // 原始点号，不随重命名改变
+  code?: string; // 编码（地物类型标识）
   x: number;
   y: number;
   z: number;
