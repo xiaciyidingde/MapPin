@@ -15,6 +15,7 @@ export function PointSettings() {
   const points = useDataStore((state) => state.points);
   const files = useDataStore((state) => state.files);
   const updatePoint = useDataStore((state) => state.updatePoint);
+  const batchUpdatePoints = useDataStore((state) => state.batchUpdatePoints);
   const updateFile = useDataStore((state) => state.updateFile);
   const deletePoint = useDataStore((state) => state.deletePoint);
   const [searchText, setSearchText] = useState('');
@@ -109,10 +110,16 @@ export function PointSettings() {
   const handleBatchUpdate = useCallback(async (type: 'survey' | 'control') => {
     if (!currentFileId || selectedPointIds.length === 0) return;
 
+    const hide = message.loading(`正在批量修改 ${selectedPointIds.length} 个点...`, 0);
+    
     try {
-      for (const pointId of selectedPointIds) {
-        await updatePoint(currentFileId, pointId, { type });
-      }
+      // 批量更新（一次数据库事务）
+      const updates = selectedPointIds.map(pointId => ({
+        pointId,
+        data: { type }
+      }));
+      
+      await batchUpdatePoints(currentFileId, updates);
       
       // 重新计算文件的控制点和测量点数量
       const updatedPoints = currentPoints.map(p => 
@@ -130,12 +137,14 @@ export function PointSettings() {
         });
       }
       
+      hide();
       message.success(`已将 ${selectedPointIds.length} 个点标记为${type === 'control' ? '控制点' : '碎部点'}`);
       setSelectedPointIds([]);
     } catch {
+      hide();
       message.error('批量修改失败');
     }
-  }, [currentFileId, selectedPointIds, currentPoints, files, updatePoint, updateFile]);
+  }, [currentFileId, selectedPointIds, currentPoints, files, batchUpdatePoints, updateFile]);
 
   // 使用 useCallback 缓存切换类型函数
   const handleToggleType = useCallback(async (point: MeasurementPoint) => {

@@ -23,6 +23,10 @@ interface DataStore {
     pointId: string,
     data: Partial<MeasurementPoint>
   ) => Promise<void>;
+  batchUpdatePoints: (
+    fileId: string,
+    updates: Array<{ pointId: string; data: Partial<MeasurementPoint> }>
+  ) => Promise<void>;
   deletePoint: (fileId: string, pointId: string, moveToRecycleBin?: boolean) => Promise<void>;
 
   // 回收站操作
@@ -149,6 +153,29 @@ export const useDataStore = create<DataStore>((set) => ({
         const updatedPoints = filePoints.map((p) =>
           p.id === pointId ? { ...p, ...data } : p
         );
+        newPoints.set(fileId, updatedPoints);
+      }
+      return { points: newPoints };
+    });
+  },
+
+  batchUpdatePoints: async (
+    fileId: string,
+    updates: Array<{ pointId: string; data: Partial<MeasurementPoint> }>
+  ) => {
+    // 批量更新数据库（一次事务）
+    await dataService.bulkUpdatePoints(updates);
+
+    // 批量更新 store
+    set((state) => {
+      const newPoints = new Map(state.points);
+      const filePoints = newPoints.get(fileId);
+      if (filePoints) {
+        const updateMap = new Map(updates.map(u => [u.pointId, u.data]));
+        const updatedPoints = filePoints.map((p) => {
+          const update = updateMap.get(p.id);
+          return update ? { ...p, ...update } : p;
+        });
         newPoints.set(fileId, updatedPoints);
       }
       return { points: newPoints };
