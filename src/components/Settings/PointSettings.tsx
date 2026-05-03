@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Card, Button, Tag, Input, Dropdown, Space, message, Checkbox, Empty, Popconfirm, Modal } from 'antd';
+import { useState, useMemo, useCallback } from 'react';
+import { Button, Input, Dropdown, message, Checkbox, Empty, Modal } from 'antd';
 import type { MenuProps } from 'antd';
-import { SearchOutlined, DeleteOutlined, SwapOutlined, EditOutlined, FilterOutlined } from '@ant-design/icons';
+import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
+import { Virtuoso } from 'react-virtuoso';
 import { useMapStore, useDataStore } from '../../store';
+import { PointCard } from './PointCard';
 import type { MeasurementPoint } from '../../types';
 import { isValidPointNumber } from '../../utils/sanitize';
 
@@ -24,8 +26,8 @@ export function PointSettings() {
 
   const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
   
-  // 筛选菜单
-  const filterMenuItems: MenuProps['items'] = [
+  // 使用 useMemo 缓存筛选菜单
+  const filterMenuItems: MenuProps['items'] = useMemo(() => [
     {
       key: 'all',
       label: '全部点位',
@@ -46,10 +48,10 @@ export function PointSettings() {
       label: '手动点',
       onClick: () => setFilterType('manual'),
     },
-  ];
+  ], []);
 
-  // 获取筛选按钮文本
-  const getFilterLabel = () => {
+  // 使用 useMemo 缓存筛选按钮文本
+  const filterLabel = useMemo(() => {
     switch (filterType) {
       case 'survey':
         return '碎部点';
@@ -60,34 +62,35 @@ export function PointSettings() {
       default:
         return '全部';
     }
-  };
+  }, [filterType]);
   
-  // 先按类型筛选
-  const typeFilteredPoints = currentPoints.filter((point) => {
-    if (filterType === 'all') return true;
-    if (filterType === 'manual') return point.isManuallyAdded === true;
-    if (filterType === 'survey') return point.type === 'survey';
-    if (filterType === 'control') return point.type === 'control';
-    return true;
-  });
-  
-  // 再按搜索文本过滤
-  const filteredPoints = typeFilteredPoints.filter((point) =>
-    point.pointNumber.toLowerCase().includes(searchText.toLowerCase())
-  );
+  // 使用 useMemo 缓存排序和过滤结果
+  const sortedPoints = useMemo(() => {
+    // 先按类型筛选
+    const typeFiltered = currentPoints.filter((point) => {
+      if (filterType === 'all') return true;
+      if (filterType === 'manual') return point.isManuallyAdded === true;
+      if (filterType === 'survey') return point.type === 'survey';
+      if (filterType === 'control') return point.type === 'control';
+      return true;
+    });
+    
+    // 再按搜索文本过滤
+    const searchFiltered = typeFiltered.filter((point) =>
+      point.pointNumber.toLowerCase().includes(searchText.toLowerCase())
+    );
 
-  // 排序：控制点在前，测量点在后，每组内按 order 字段保持原始顺序
-  const sortedPoints = [...filteredPoints].sort((a, b) => {
-    if (a.type === b.type) {
-      // 同类型按 order 排序
-      return a.order - b.order;
-    }
-    // 控制点在前
-    return a.type === 'control' ? -1 : 1;
-  });
+    // 排序：控制点在前，测量点在后，每组内按 order 字段保持原始顺序
+    return [...searchFiltered].sort((a, b) => {
+      if (a.type === b.type) {
+        return a.order - b.order;
+      }
+      return a.type === 'control' ? -1 : 1;
+    });
+  }, [currentPoints, filterType, searchText]);
 
-  // 批量操作菜单
-  const batchMenuItems: MenuProps['items'] = [
+  // 使用 useMemo 缓存批量操作菜单
+  const batchMenuItems: MenuProps['items'] = useMemo(() => [
     {
       key: 'survey',
       label: '标记为碎部点',
@@ -100,10 +103,10 @@ export function PointSettings() {
       disabled: selectedPointIds.length === 0,
       onClick: () => handleBatchUpdate('control'),
     },
-  ];
+  ], [selectedPointIds.length]);
 
-  // 批量修改类型
-  const handleBatchUpdate = async (type: 'survey' | 'control') => {
+  // 使用 useCallback 缓存批量修改函数
+  const handleBatchUpdate = useCallback(async (type: 'survey' | 'control') => {
     if (!currentFileId || selectedPointIds.length === 0) return;
 
     try {
@@ -132,10 +135,10 @@ export function PointSettings() {
     } catch {
       message.error('批量修改失败');
     }
-  };
+  }, [currentFileId, selectedPointIds, currentPoints, files, updatePoint, updateFile]);
 
-  // 单个点切换类型
-  const handleToggleType = async (point: MeasurementPoint) => {
+  // 使用 useCallback 缓存切换类型函数
+  const handleToggleType = useCallback(async (point: MeasurementPoint) => {
     if (!currentFileId) return;
     
     const newType = point.type === 'survey' ? 'control' : 'survey';
@@ -162,10 +165,10 @@ export function PointSettings() {
     } catch {
       message.error('修改失败');
     }
-  };
+  }, [currentFileId, currentPoints, files, updatePoint, updateFile]);
 
-  // 删除单个点
-  const handleDeletePoint = async (point: MeasurementPoint) => {
+  // 使用 useCallback 缓存删除函数
+  const handleDeletePoint = useCallback(async (point: MeasurementPoint) => {
     if (!currentFileId) return;
     
     try {
@@ -176,17 +179,17 @@ export function PointSettings() {
     } catch {
       message.error('删除失败');
     }
-  };
+  }, [currentFileId, deletePoint]);
 
-  // 打开重命名对话框
-  const handleOpenRename = (point: MeasurementPoint) => {
+  // 使用 useCallback 缓存打开重命名函数
+  const handleOpenRename = useCallback((point: MeasurementPoint) => {
     setRenamingPoint(point);
     setNewPointNumber(point.pointNumber);
     setRenameModalOpen(true);
-  };
+  }, []);
 
-  // 确认重命名
-  const handleConfirmRename = async () => {
+  // 使用 useCallback 缓存确认重命名函数
+  const handleConfirmRename = useCallback(async () => {
     if (!currentFileId || !renamingPoint) return;
     
     const trimmedName = newPointNumber.trim();
@@ -226,25 +229,25 @@ export function PointSettings() {
     } catch {
       message.error('重命名失败');
     }
-  };
+  }, [currentFileId, renamingPoint, newPointNumber, currentPoints, updatePoint]);
 
-  // 切换选中状态
-  const handleToggleSelect = (pointId: string) => {
+  // 使用 useCallback 缓存切换选中函数
+  const handleToggleSelect = useCallback((pointId: string) => {
     setSelectedPointIds((prev) =>
       prev.includes(pointId)
         ? prev.filter((id) => id !== pointId)
         : [...prev, pointId]
     );
-  };
+  }, []);
 
-  // 全选/取消全选
-  const handleSelectAll = () => {
+  // 使用 useCallback 缓存全选函数
+  const handleSelectAll = useCallback(() => {
     if (selectedPointIds.length === sortedPoints.length) {
       setSelectedPointIds([]);
     } else {
       setSelectedPointIds(sortedPoints.map((p) => p.id));
     }
-  };
+  }, [selectedPointIds.length, sortedPoints]);
 
   if (!currentFileId) {
     return (
@@ -294,7 +297,7 @@ export function PointSettings() {
         <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 600 }}>
           <Dropdown menu={{ items: filterMenuItems }} placement="bottomLeft">
             <Button icon={<FilterOutlined />} style={{ flexShrink: 0 }}>
-              {getFilterLabel()}
+              {filterLabel}
             </Button>
           </Dropdown>
           <Input
@@ -328,165 +331,28 @@ export function PointSettings() {
         </div>
       )}
 
-      {/* 卡片列表 */}
+      {/* 卡片列表 - 使用虚拟滚动 */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '100%', maxWidth: 600 }}>
           {sortedPoints.length === 0 ? (
             <Empty description="没有找到匹配的点位" />
           ) : (
-            <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-              {sortedPoints.map((point) => {
-            // 格式化坐标字符串
-            const coordX = `X: ${point.x.toFixed(3)}`;
-            const coordY = `Y: ${point.y.toFixed(3)}`;
-            const coordZ = `Z: ${point.z.toFixed(3)}`;
-            
-            return (
-              <Card
-                key={point.id}
-                size="small"
-                style={{ width: '100%' }}
-                styles={{ body: { padding: '12px' } }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  {/* 复选框 */}
-                  <Checkbox
-                    checked={selectedPointIds.includes(point.id)}
-                    onChange={() => handleToggleSelect(point.id)}
-                    style={{ marginTop: 2 }}
+            <Virtuoso
+              style={{ height: 'calc(100vh - 300px)' }}
+              data={sortedPoints}
+              itemContent={(_index, point) => (
+                <div style={{ marginBottom: 12 }}>
+                  <PointCard
+                    point={point}
+                    isSelected={selectedPointIds.includes(point.id)}
+                    onToggleSelect={handleToggleSelect}
+                    onToggleType={handleToggleType}
+                    onOpenRename={handleOpenRename}
+                    onDelete={handleDeletePoint}
                   />
-
-                  {/* 点位信息 */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* 点号和类型 */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                        <span style={{ 
-                          fontWeight: 500, 
-                          fontSize: 15, 
-                          lineHeight: 1.4,
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          wordBreak: 'break-all'
-                        }}>
-                          {point.pointNumber}
-                        </span>
-                        {point.isManuallyAdded && (
-                          <span style={{ fontSize: 12, color: '#8c8c8c', whiteSpace: 'nowrap', lineHeight: 1, flexShrink: 0 }}>
-                            手动添加
-                          </span>
-                        )}
-                      </div>
-                      <Tag color={point.type === 'control' ? 'red' : 'blue'} style={{ flexShrink: 0, marginTop: 2 }}>
-                        {point.type === 'control' ? '控制点' : '碎部点'}
-                      </Tag>
-                    </div>
-                    
-                    {/* 编码 - 单独一行 */}
-                    {point.code && (
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
-                        编码: {point.code}
-                      </div>
-                    )}
-                    
-                    {/* 原始点号 - 单独一行 */}
-                    {point.originalPointNumber && point.originalPointNumber !== point.pointNumber && (
-                      <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
-                        原名: {point.originalPointNumber}
-                      </div>
-                    )}
-
-                    {/* 坐标信息 - 智能换行 */}
-                    <div style={{ fontSize: 13, color: '#666', lineHeight: 1.6, marginBottom: 8 }}>
-                      <div style={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap',
-                        gap: '8px'
-                      }}>
-                        <span style={{ whiteSpace: 'nowrap' }}>{coordX}</span>
-                        <span style={{ whiteSpace: 'nowrap' }}>{coordY}</span>
-                        <span style={{ whiteSpace: 'nowrap' }}>{coordZ}</span>
-                      </div>
-                    </div>
-
-                    {/* 精度信息 - 如果有才显示 */}
-                    {point.qualityParams && (point.qualityParams.hrms !== undefined || point.qualityParams.vrms !== undefined) && (
-                      <div style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {point.qualityParams.hrms !== undefined && (
-                            (() => {
-                              const hrms = typeof point.qualityParams.hrms === 'number' 
-                                ? point.qualityParams.hrms 
-                                : parseFloat(String(point.qualityParams.hrms));
-                              return !isNaN(hrms) && (
-                                <span style={{ 
-                                  whiteSpace: 'nowrap',
-                                  color: hrms > 0.05 ? '#ff4d4f' : '#666'
-                                }}>
-                                  水平精度: {hrms.toFixed(3)}m
-                                </span>
-                              );
-                            })()
-                          )}
-                          {point.qualityParams.vrms !== undefined && (
-                            (() => {
-                              const vrms = typeof point.qualityParams.vrms === 'number' 
-                                ? point.qualityParams.vrms 
-                                : parseFloat(String(point.qualityParams.vrms));
-                              return !isNaN(vrms) && (
-                                <span style={{ 
-                                  whiteSpace: 'nowrap',
-                                  color: vrms > 0.05 ? '#ff4d4f' : '#666'
-                                }}>
-                                  垂直精度: {vrms.toFixed(3)}m
-                                </span>
-                              );
-                            })()
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 操作按钮 */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <Button
-                          size="small"
-                          icon={<SwapOutlined />}
-                          onClick={() => handleToggleType(point)}
-                          title="切换类型"
-                        />
-                        <Button
-                          size="small"
-                          icon={<EditOutlined />}
-                          onClick={() => handleOpenRename(point)}
-                          title="重命名"
-                        />
-                      </div>
-                      <Popconfirm
-                        title="确认删除"
-                        description={`确定要删除点 ${point.pointNumber} 吗？`}
-                        onConfirm={() => handleDeletePoint(point)}
-                        okText="删除"
-                        cancelText="取消"
-                        okButtonProps={{ danger: true }}
-                      >
-                        <Button
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          title="删除"
-                        />
-                      </Popconfirm>
-                    </div>
-                  </div>
                 </div>
-              </Card>
-            );
-          })}
-        </Space>
+              )}
+            />
           )}
         </div>
       </div>
