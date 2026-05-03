@@ -39,13 +39,13 @@ export function MapSettings() {
             />
           </Form.Item>
 
-          <Form.Item label="投影方式" tooltip="创建或导入文件时的默认投影方式">
+          <Form.Item label="投影方式" tooltip="选择坐标投影方式，用于将地理坐标转换为平面坐标">
             <Select
               value={projectionType}
               onChange={setProjectionType}
               options={[
-                { label: '高斯投影（3°带）', value: 'gauss-3' },
-                { label: '高斯投影（6°带）', value: 'gauss-6' },
+                { label: '高斯-克吕格投影 3°带', value: 'gauss-3' },
+                { label: '高斯-克吕格投影 6°带', value: 'gauss-6' },
               ]}
             />
           </Form.Item>
