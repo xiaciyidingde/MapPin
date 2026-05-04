@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Force Node.js 24 for Actions
+        run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run lint
+        run: npm run lint
+      
+      - name: Run tests
+        run: npm run test:run
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Create build archive
+        run: |
+          cd dist
+          zip -r ../dist.zip .
+          cd ..
+      
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog
+        id: changelog
+        uses: mathiasvr/command-output@v2.0.0
+        with:
+          run: |
+            VERSION="${{ steps.version.outputs.VERSION }}"
+            CHANGELOG=$(awk -v version="v$VERSION" '
+              /^## \[v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\]/ {
+                if (found) exit
+                if ($0 ~ "\\[" version "\\]") {
+                  found=1
+                  next
+                }
+              }
+              found && /^---$/ { next }
+              found && /^## \[v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\]/ { exit }
+              found { print }
+            ' CHANGELOG.md)
+            
+            if [ -z "$CHANGELOG" ]; then
+              echo "自动构建发布"
+            else
+              echo "$CHANGELOG"
+            fi
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## 版本 v${{ steps.version.outputs.VERSION }}
+            
+            ${{ steps.changelog.outputs.stdout }}
+          files: dist.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-v${{ steps.version.outputs.VERSION }}
+          path: dist/
+          retention-days: 30

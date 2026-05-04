@@ -1,6 +1,6 @@
 import { Modal, Checkbox, Button, Flex, Tag } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 
 interface ZipFileInfo {
   name: string;
@@ -16,14 +16,14 @@ interface ZipImportModalProps {
 }
 
 export function ZipImportModal({ open, files, onConfirm, onCancel }: ZipImportModalProps) {
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  // 使用 useMemo 计算初始选中状态，当 files 或 open 变化时重新计算
+  const initialSelectedFiles = useMemo(() => files.map(f => f.name), [files]);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>(initialSelectedFiles);
 
-  // 当 files 变化时重置选中状态
-  useEffect(() => {
-    if (open) {
-      setSelectedFiles(files.map(f => f.name));
-    }
-  }, [files, open]);
+  // 当初始值变化时，重置选中状态
+  if (open && selectedFiles.length === 0 && initialSelectedFiles.length > 0) {
+    setSelectedFiles(initialSelectedFiles);
+  }
 
   const handleSelectAll = () => {
     setSelectedFiles(files.map(f => f.name));
