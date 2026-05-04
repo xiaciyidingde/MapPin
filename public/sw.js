@@ -1,5 +1,5 @@
 // MapPin Service Worker - 离线缓存策略
-const CACHE_NAME = 'mappin-v1.0.6';
+const CACHE_NAME = 'mappin-v1.0.7';
 const RUNTIME_CACHE = 'mappin-runtime';
 
 // 需要预缓存的核心资源
