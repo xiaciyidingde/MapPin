@@ -1,9 +1,10 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
-import { Layout, Drawer, Button, FloatButton, Spin, message } from 'antd';
+import { Layout, Drawer, Button, FloatButton, Spin, message, Tabs } from 'antd';
 import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { UploadZone } from './components/FileUpload/UploadZone';
 import { FileList } from './components/FileUpload/FileList';
 import { Statistics } from './components/DataPanel/Statistics';
+import { DataSettings } from './components/Settings/DataSettings';
 import { MapView } from './components/Map/MapView';
 import { PointSearch } from './components/Search/PointSearch';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -22,6 +23,7 @@ const { Header, Content } = Layout;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [fileManagementTab, setFileManagementTab] = useState('files');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('global');
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -353,12 +355,12 @@ function App() {
         />
       </FloatButton.Group>
 
-      {/* 文件列表抽屉 */}
+      {/* 文件管理抽屉 */}
       <Drawer
         title="文件管理"
         placement="bottom"
         styles={{ 
-          body: { height: 'calc(100vh - 64px - 55px)', maxHeight: 'calc(100dvh - 64px - 55px)', overflowY: 'auto' },
+          body: { padding: 0, height: 'calc(100vh - 64px - 55px)', maxHeight: 'calc(100dvh - 64px - 55px)', display: 'flex', flexDirection: 'column' },
           wrapper: { 
             top: 64,
             height: 'calc(100vh - 64px)',
@@ -368,24 +370,52 @@ function App() {
         onClose={() => setDrawerOpen(false)}
         open={drawerOpen}
       >
-        <div className="space-y-4">
-          <UploadZone onFileUploaded={() => setDrawerOpen(false)} />
-          <Statistics />
-          <div className="mt-4">
-            <h3 className="text-base font-semibold mb-3">文件列表</h3>
-            <FileList 
-              onOpenSettings={(fileId) => {
-                setDrawerOpen(false);
-                setSelectedFileId(fileId);
-                setFileSettingsOpen(true);
-              }}
-              onFileSelect={() => {
-                // 文件被选中后关闭文件管理抽屉
-                setDrawerOpen(false);
-              }}
-            />
-          </div>
-        </div>
+        <Tabs
+          activeKey={fileManagementTab}
+          onChange={setFileManagementTab}
+          items={[
+            {
+              key: 'files',
+              label: '文件列表',
+              children: (
+                <div className="space-y-4">
+                  <UploadZone onFileUploaded={() => setDrawerOpen(false)} />
+                  <Statistics />
+                  <div className="mt-4">
+                    <h3 className="text-base font-semibold mb-3">文件列表</h3>
+                    <FileList 
+                      onOpenSettings={(fileId) => {
+                        setDrawerOpen(false);
+                        setSelectedFileId(fileId);
+                        setFileSettingsOpen(true);
+                      }}
+                      onFileSelect={() => {
+                        // 文件被选中后关闭文件管理抽屉
+                        setDrawerOpen(false);
+                      }}
+                    />
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'data',
+              label: '数据管理',
+              children: <DataSettings />,
+            },
+          ]}
+          style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          tabBarStyle={{ 
+            paddingLeft: 16, 
+            paddingRight: 16, 
+            margin: 0,
+            background: '#fff',
+            flexShrink: 0
+          }}
+          styles={{
+            content: { flex: 1, overflow: 'auto', padding: '16px' }
+          }}
+        />
       </Drawer>
 
 

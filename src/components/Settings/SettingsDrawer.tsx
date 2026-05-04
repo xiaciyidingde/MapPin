@@ -23,11 +23,11 @@ export function SettingsDrawer({ defaultTab = 'global' }: SettingsDrawerProps) {
   ];
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Tabs
         defaultActiveKey={defaultTab}
         items={items}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 600 }}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%' }}
         tabBarStyle={{ 
           paddingLeft: 16, 
           paddingRight: 16, 
