@@ -12,7 +12,11 @@ import { isValidFileName, sanitizeFileName, isValidFileSize, isValidFileType } f
 
 const { Dragger } = Upload;
 
-export function UploadZone() {
+interface UploadZoneProps {
+  onFileUploaded?: () => void; // 文件上传成功后的回调
+}
+
+export function UploadZone({ onFileUploaded }: UploadZoneProps) {
   const [uploading, setUploading] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -179,6 +183,9 @@ export function UploadZone() {
             setTimeout(() => {
               triggerFitToView();
             }, 100);
+            
+            // 通知父组件文件已上传
+            onFileUploaded?.();
           },
         });
       } else {
@@ -189,6 +196,9 @@ export function UploadZone() {
         setTimeout(() => {
           triggerFitToView();
         }, 100);
+        
+        // 通知父组件文件已上传
+        onFileUploaded?.();
       }
     } catch (error) {
       console.error('文件上传失败:', error);
@@ -227,7 +237,7 @@ export function UploadZone() {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', width: '100%' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', width: '100%', marginBottom: '24px' }}>
       <Dragger {...uploadProps} disabled={uploading || configModalOpen}>
         <p className="ant-upload-drag-icon">
           <InboxOutlined />

@@ -1,6 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { Layout, Drawer, Button, FloatButton, Spin, message } from 'antd';
-import { FileTextOutlined, UploadOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { UploadZone } from './components/FileUpload/UploadZone';
 import { FileList } from './components/FileUpload/FileList';
 import { Statistics } from './components/DataPanel/Statistics';
@@ -22,7 +22,6 @@ const { Header, Content } = Layout;
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [uploadDrawerOpen, setUploadDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('global');
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -303,7 +302,7 @@ function App() {
         </div>
         
         {/* 中间搜索框 */}
-        <PointSearch disabled={drawerOpen || uploadDrawerOpen || settingsOpen || toolsOpen || fileSettingsOpen || aboutOpen} />
+        <PointSearch disabled={drawerOpen || settingsOpen || toolsOpen || fileSettingsOpen || aboutOpen} />
         
         {/* 右侧按钮 */}
         <Button
@@ -349,10 +348,6 @@ function App() {
           type="primary"
         />
         <FloatButton
-          icon={<UploadOutlined />}
-          onClick={() => setUploadDrawerOpen(true)}
-        />
-        <FloatButton
           icon={<FileTextOutlined />}
           onClick={() => setDrawerOpen(true)}
         />
@@ -363,7 +358,7 @@ function App() {
         title="文件管理"
         placement="bottom"
         styles={{ 
-          body: { height: '70vh', maxHeight: '70dvh' },
+          body: { height: 'calc(100vh - 64px - 55px)', maxHeight: 'calc(100dvh - 64px - 55px)', overflowY: 'auto' },
           wrapper: { 
             top: 64,
             height: 'calc(100vh - 64px)',
@@ -374,6 +369,7 @@ function App() {
         open={drawerOpen}
       >
         <div className="space-y-4">
+          <UploadZone onFileUploaded={() => setDrawerOpen(false)} />
           <Statistics />
           <div className="mt-4">
             <h3 className="text-base font-semibold mb-3">文件列表</h3>
@@ -392,15 +388,7 @@ function App() {
         </div>
       </Drawer>
 
-      {/* 上传文件抽屉 */}
-      <Drawer
-        title="上传文件"
-        placement="bottom"
-        onClose={() => setUploadDrawerOpen(false)}
-        open={uploadDrawerOpen}
-      >
-        <UploadZone />
-      </Drawer>
+
 
       {/* 设置抽屉 - 从底部滑上来，不覆盖标题栏 */}
       <Drawer
