@@ -66,6 +66,14 @@ export class MapPinDatabase extends Dexie {
       recycleBin: 'id, deletedTime, type, sourceFileId',
       settings: 'key',
     });
+
+    // 版本 5：添加 code 字段（编码）
+    this.version(5).stores({
+      files: 'id, name, uploadTime',
+      points: 'id, fileId, pointNumber, originalPointNumber, code, type, order, [fileId+order]',
+      recycleBin: 'id, deletedTime, type, sourceFileId',
+      settings: 'key',
+    });
   }
 }
 

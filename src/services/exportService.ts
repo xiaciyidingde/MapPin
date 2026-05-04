@@ -149,20 +149,20 @@ function generateFileContent(
 
 /**
  * 格式化简单格式行
- * 格式：点号,,X,Y,Z
+ * 格式：点号,编码,X,Y,Z
  */
 function formatSimpleLine(point: MeasurementPoint): string {
-  return `${point.pointNumber},,${point.x},${point.y},${point.z}`;
+  return `${point.pointNumber},${point.code || ''},${point.x},${point.y},${point.z}`;
 }
 
 /**
  * 格式化详细格式行
- * 格式：点号,,X,Y,Z,HRMS:xxx,VRMS:xxx,STATUS:xxx,...
+ * 格式：点号,编码,X,Y,Z,HRMS:xxx,VRMS:xxx,STATUS:xxx,...
  */
 function formatDetailedLine(point: MeasurementPoint): string {
   const parts = [
     point.pointNumber,
-    '',
+    point.code || '',
     point.x.toString(),
     point.y.toString(),
     point.z.toString(),

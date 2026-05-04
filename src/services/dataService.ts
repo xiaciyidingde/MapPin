@@ -121,6 +121,19 @@ export class LocalDataService implements IDataService {
     }, '更新测量点');
   }
 
+  // 批量更新测量点
+  async bulkUpdatePoints(
+    updates: Array<{ pointId: string; data: Partial<MeasurementPoint> }>
+  ): Promise<void> {
+    return this.handleOperation(async () => {
+      await db.transaction('rw', db.points, async () => {
+        for (const { pointId, data } of updates) {
+          await db.points.update(pointId, data);
+        }
+      });
+    }, '批量更新测量点');
+  }
+
   async deletePoint(_fileId: string, pointId: string): Promise<void> {
     return this.handleOperation(async () => {
       await db.points.delete(pointId);

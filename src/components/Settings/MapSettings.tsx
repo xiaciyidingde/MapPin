@@ -1,6 +1,5 @@
-import { Form, Switch, Select, InputNumber, Space, Input } from 'antd';
+import { Form, Switch, Select, InputNumber, Space } from 'antd';
 import { useSettingsStore } from '../../store';
-import { MAP_TILE_SOURCES } from '../../config/mapTileSources';
 
 export function MapSettings() {
   // 投影配置
@@ -18,12 +17,6 @@ export function MapSettings() {
   const setAutoLocate = useSettingsStore((state) => state.setAutoLocate);
   const showPointLabels = useSettingsStore((state) => state.showPointLabels);
   const setShowPointLabels = useSettingsStore((state) => state.setShowPointLabels);
-  
-  // 地图源设置
-  const mapTileSource = useSettingsStore((state) => state.mapTileSource);
-  const setMapTileSource = useSettingsStore((state) => state.setMapTileSource);
-  const apiKeys = useSettingsStore((state) => state.apiKeys);
-  const setApiKey = useSettingsStore((state) => state.setApiKey);
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
@@ -46,13 +39,13 @@ export function MapSettings() {
             />
           </Form.Item>
 
-          <Form.Item label="投影方式" tooltip="创建或导入文件时的默认投影方式">
+          <Form.Item label="投影方式" tooltip="选择坐标投影方式，用于将地理坐标转换为平面坐标">
             <Select
               value={projectionType}
               onChange={setProjectionType}
               options={[
-                { label: '高斯投影（3°带）', value: 'gauss-3' },
-                { label: '高斯投影（6°带）', value: 'gauss-6' },
+                { label: '高斯-克吕格投影 3°带', value: 'gauss-3' },
+                { label: '高斯-克吕格投影 6°带', value: 'gauss-6' },
               ]}
             />
           </Form.Item>
@@ -82,43 +75,6 @@ export function MapSettings() {
               </div>
             </Space.Compact>
           </Form.Item>
-        </Form>
-
-        {/* 地图源设置 */}
-        <div className="text-sm text-gray-600 mb-4" style={{ marginTop: 32 }}>
-          🗺️ 地图源
-        </div>
-        <Form layout="vertical">
-          <Form.Item label="底图类型" tooltip="选择地图底图样式">
-            <Select
-              value={mapTileSource}
-              onChange={setMapTileSource}
-              options={Object.values(MAP_TILE_SOURCES).map(source => ({
-                label: source.name,
-                value: source.id,
-              }))}
-            />
-            <div className="text-xs text-gray-500 mt-2">
-              {MAP_TILE_SOURCES[mapTileSource]?.description}
-            </div>
-          </Form.Item>
-
-          {MAP_TILE_SOURCES[mapTileSource]?.requiresToken && (
-            <Form.Item 
-              label="天地图 Token" 
-              tooltip="申请地址：https://cloudcenter.tianditu.gov.cn/center/development/myApp"
-            >
-              <Input.Password
-                value={apiKeys.tianditu || ''}
-                onChange={(e) => setApiKey('tianditu', e.target.value)}
-                placeholder="留空使用默认 Token（有流量限制）"
-                visibilityToggle
-              />
-              <div className="text-xs text-gray-500 mt-2">
-                💡 默认使用公共 Token，建议申请个人 Token 以获得更稳定的服务
-              </div>
-            </Form.Item>
-          )}
         </Form>
 
         {/* 地图显示设置 */}

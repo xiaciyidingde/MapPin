@@ -71,6 +71,7 @@ export class DatFileParser implements IFileParser {
         }
 
         let pointNumber = parts[0].trim();
+        const code = parts[1].trim() || undefined; // 编码（可能为空）
         const x = parseFloat(parts[2]);
         const y = parseFloat(parts[3]);
         const z = parseFloat(parts[4]);
@@ -172,6 +173,7 @@ export class DatFileParser implements IFileParser {
           fileId,
           pointNumber,
           originalPointNumber, // 保存原始点号
+          code, // 编码
           x,
           y,
           z,

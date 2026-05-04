@@ -103,14 +103,14 @@ class AnomalyDetectionService {
   }
 
   /**
-   * 检测孤立点（远离测绘范围的点，使用空间网格优化）
+   * 检测孤立点（基于最近邻距离，使用空间网格优化）
    */
   private detectIsolatedPoints(points: MeasurementPoint[], config: AnomalyDetectionConfig): Anomaly[] {
     if (points.length < 3) return []; // 点数太少无法判定
 
     const anomalies: Anomaly[] = [];
 
-    // 计算测绘范围的边界框
+    // 计算边界框用于空间网格
     const xValues = points.map(p => p.x);
     const yValues = points.map(p => p.y);
     
@@ -119,17 +119,13 @@ class AnomalyDetectionService {
     const minY = Math.min(...yValues);
     const maxY = Math.max(...yValues);
     
-    // 计算边界框的中心点
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    
-    // 计算边界框的"半径"（从中心到角的距离）
-    const rangeRadius = Math.sqrt(
-      Math.pow((maxX - minX) / 2, 2) + Math.pow((maxY - minY) / 2, 2)
-    );
+    // 计算合理的网格大小（基于点的平均密度）
+    const area = (maxX - minX) * (maxY - minY);
+    const avgDensity = points.length / area;
+    const avgDistance = Math.sqrt(1 / avgDensity);
+    const gridSize = Math.max(avgDistance * 5, 1); // 网格大小为平均距离的5倍
     
     // 使用空间网格加速最近点查找
-    const gridSize = Math.max(rangeRadius / 10, 1); // 将范围分成10x10网格，最小1米
     const spatialGrid = new Map<string, MeasurementPoint[]>();
     
     // 构建空间索引
@@ -152,9 +148,11 @@ class AnomalyDetectionService {
       let minDistance = Infinity;
       let nearestPointNumber = '';
       
-      // 只检查当前网格及相邻网格
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
+      // 扩大搜索范围，确保能找到最近点
+      const searchRadius = 3; // 搜索周围 3x3 = 9 个网格
+      
+      for (let dx = -searchRadius; dx <= searchRadius; dx++) {
+        for (let dy = -searchRadius; dy <= searchRadius; dy++) {
           const key = `${gridX + dx},${gridY + dy}`;
           const gridPoints = spatialGrid.get(key) || [];
           
@@ -172,29 +170,40 @@ class AnomalyDetectionService {
       return { distance: minDistance, pointNumber: nearestPointNumber };
     };
     
-    // 孤立点判定：距离中心超过配置倍数的范围半径
-    const isolationThreshold = rangeRadius * config.isolatedPointRangeMultiplier;
+    // 1. 计算所有点的最近邻距离
+    const nearestDistances: number[] = [];
+    const nearestPointNumbers: string[] = [];
     
     for (const point of points) {
-      const distanceFromCenter = Math.sqrt(
-        Math.pow(point.x - centerX, 2) + Math.pow(point.y - centerY, 2)
-      );
+      const { distance, pointNumber } = findNearestPoint(point);
+      nearestDistances.push(distance);
+      nearestPointNumbers.push(pointNumber);
+    }
+    
+    // 2. 计算中位数（更稳健，不受极值影响）
+    const sortedDistances = [...nearestDistances].sort((a, b) => a - b);
+    const medianDistance = sortedDistances[Math.floor(sortedDistances.length / 2)];
+    
+    // 3. 孤立点判定：最近邻距离 > 中位数 × 倍数
+    const isolationThreshold = medianDistance * config.isolatedPointRangeMultiplier;
+    
+    for (let i = 0; i < points.length; i++) {
+      const point = points[i];
+      const nearestDistance = nearestDistances[i];
       
-      if (distanceFromCenter > isolationThreshold) {
-        const { distance: nearestDistance, pointNumber: nearestPoint } = findNearestPoint(point);
-        const ratio = (distanceFromCenter / rangeRadius).toFixed(1);
+      if (nearestDistance > isolationThreshold) {
+        const ratio = (nearestDistance / medianDistance).toFixed(1);
         
         anomalies.push({
           type: 'isolated',
           pointId: point.id,
           pointNumber: point.pointNumber,
-          severity: distanceFromCenter > isolationThreshold * 1.5 ? 'high' : 'medium',
-          message: `远离测绘范围，距离中心 ${distanceFromCenter.toFixed(1)}m（${ratio}倍范围半径）`,
+          severity: nearestDistance > isolationThreshold * 1.5 ? 'high' : 'medium',
+          message: `孤立点，最近邻距离 ${nearestDistance.toFixed(1)}m（${ratio}倍中位数）`,
           details: {
-            distanceFromCenter,
-            rangeRadius,
             nearestDistance,
-            nearestPoint,
+            medianDistance,
+            nearestPoint: nearestPointNumbers[i],
             threshold: isolationThreshold,
           },
         });

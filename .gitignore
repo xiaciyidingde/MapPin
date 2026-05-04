@@ -24,3 +24,5 @@ coverage
 *.sln
 *.sw?
 
+1.mydata/*
+
