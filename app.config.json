@@ -41,8 +41,8 @@
   },
   "file": {
     "maxSizeMB": 50,
-    "allowedTypes": ["dat"],
-    "allowedExtensions": ".dat"
+    "allowedTypes": ["dat", "zip"],
+    "allowedExtensions": ".dat,.zip"
   },
   "performance": {
     "largeFileThreshold": 1000,

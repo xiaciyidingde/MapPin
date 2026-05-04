@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Upload, message, Modal } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
+import JSZip from 'jszip';
 import { fileParser, createMeasurementFile } from '../../services/fileParser';
 import type { ParseWarning, ParseError } from '../../services/fileParser';
 import { coordinateConverter } from '../../services/coordinateConverter';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
+import { ZipImportModal } from './ZipImportModal';
 import type { ProjectionConfig } from '../../types';
 import { isValidFileName, sanitizeFileName, isValidFileSize, isValidFileType } from '../../utils/sanitize';
 
@@ -19,7 +21,9 @@ interface UploadZoneProps {
 export function UploadZone({ onFileUploaded }: UploadZoneProps) {
   const [uploading, setUploading] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [zipModalOpen, setZipModalOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [zipFiles, setZipFiles] = useState<Array<{ name: string; content: string; size: number }>>([]);
   const addFile = useDataStore((state) => state.addFile);
   const files = useDataStore((state) => state.files);
   const currentFileId = useMapStore((state) => state.currentFileId);
@@ -211,14 +215,197 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
     }
   };
 
+  // 处理 ZIP 文件
+  const handleZipFile = async (file: File) => {
+    const hide = message.loading('正在解压文件...', 0);
+    
+    try {
+      const zip = new JSZip();
+      const zipContent = await zip.loadAsync(file);
+      
+      // 提取所有 .dat 文件
+      const datFiles: Array<{ name: string; content: string; size: number }> = [];
+      
+      for (const [fileName, zipEntry] of Object.entries(zipContent.files)) {
+        if (!zipEntry.dir && fileName.toLowerCase().endsWith('.dat')) {
+          const content = await zipEntry.async('text');
+          datFiles.push({
+            name: fileName.split('/').pop() || fileName, // 只保留文件名，去掉路径
+            content,
+            size: content.length,
+          });
+        }
+      }
+      
+      hide();
+      
+      if (datFiles.length === 0) {
+        message.warning('压缩包中没有找到 .dat 文件');
+        return;
+      }
+      
+      // 如果只有一个文件，直接导入
+      if (datFiles.length === 1) {
+        const datFile = datFiles[0];
+        const blob = new Blob([datFile.content], { type: 'text/plain' });
+        const singleFile = new File([blob], datFile.name, { type: 'text/plain' });
+        setPendingFile(singleFile);
+        setConfigModalOpen(true);
+        return;
+      }
+      
+      // 多个文件，显示选择对话框
+      setZipFiles(datFiles);
+      setZipModalOpen(true);
+      
+    } catch (error) {
+      hide();
+      console.error('解压失败:', error);
+      message.error('无法解压文件，压缩包可能已损坏');
+    }
+  };
+
+  // 批量导入 ZIP 中的文件
+  const handleZipImport = async (selectedFileNames: string[]) => {
+    setZipModalOpen(false);
+    setUploading(true);
+    
+    const hide = message.loading(`正在导入 ${selectedFileNames.length} 个文件...`, 0);
+    
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+    
+    try {
+      for (const fileName of selectedFileNames) {
+        const zipFile = zipFiles.find(f => f.name === fileName);
+        if (!zipFile) continue;
+        
+        try {
+          // 创建 File 对象
+          const blob = new Blob([zipFile.content], { type: 'text/plain' });
+          const file = new File([blob], zipFile.name, { type: 'text/plain' });
+          
+          // 解析文件
+          const parseResult = await fileParser.parse(file, '');
+          
+          if (parseResult.points.length === 0) {
+            errors.push(`${fileName}: 没有有效数据`);
+            failCount++;
+            continue;
+          }
+          
+          if (parseResult.points.length > maxPointsPerFile) {
+            errors.push(`${fileName}: 点位数量超过限制`);
+            failCount++;
+            continue;
+          }
+          
+          // 使用默认配置（后续可以改进为让用户选择）
+          const config: ProjectionConfig = {
+            coordinateSystem: 'CGCS2000',
+            projectionType: 'gauss-3',
+            centralMeridian: 117,
+          };
+          
+          // 创建文件对象
+          const measurementFile = createMeasurementFile(
+            zipFile.name,
+            parseResult,
+            config.coordinateSystem,
+            config
+          );
+          
+          // 转换坐标
+          const pointsWithLatLng = parseResult.points.map((point) => {
+            const { lat, lng } = coordinateConverter.projectToWGS84(
+              point.x,
+              point.y,
+              config.coordinateSystem,
+              config.projectionType,
+              config.centralMeridian
+            );
+            
+            return {
+              ...point,
+              fileId: measurementFile.id,
+              lat,
+              lng,
+            };
+          });
+          
+          // 保存到数据库
+          await addFile(measurementFile, pointsWithLatLng);
+          successCount++;
+          
+        } catch (error) {
+          console.error(`导入 ${fileName} 失败:`, error);
+          errors.push(`${fileName}: ${error instanceof Error ? error.message : '未知错误'}`);
+          failCount++;
+        }
+      }
+      
+      hide();
+      
+      // 显示结果
+      if (failCount === 0) {
+        message.success(`成功导入 ${successCount} 个文件`);
+      } else {
+        Modal.warning({
+          title: '导入完成',
+          content: (
+            <div>
+              <p>成功: {successCount} 个</p>
+              <p>失败: {failCount} 个</p>
+              {errors.length > 0 && (
+                <div style={{ marginTop: 12, maxHeight: 200, overflow: 'auto' }}>
+                  {errors.map((err, i) => (
+                    <div key={i} style={{ fontSize: 12, color: '#ff4d4f', marginBottom: 4 }}>
+                      {err}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ),
+          centered: true,
+        });
+      }
+      
+      // 通知父组件
+      if (successCount > 0) {
+        onFileUploaded?.();
+      }
+      
+    } catch (error) {
+      hide();
+      console.error('批量导入失败:', error);
+      message.error('批量导入失败');
+    } finally {
+      setUploading(false);
+      setZipFiles([]);
+    }
+  };
+
   const uploadProps: UploadProps = {
     name: 'file',
     multiple: false,
-    accept: '.dat,application/octet-stream,text/plain',
+    accept: '.dat,.zip,application/octet-stream,application/zip,text/plain',
     beforeUpload: async (file) => {
-      // 文件类型验证
+      // ZIP 文件处理
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        if (!isValidFileSize(file.size, 50)) {
+          message.error('文件大小不能超过 50MB');
+          return Upload.LIST_IGNORE;
+        }
+        
+        await handleZipFile(file);
+        return Upload.LIST_IGNORE;
+      }
+      
+      // DAT 文件处理（原有逻辑）
       if (!isValidFileType(file.name, ['dat'])) {
-        message.error('只支持 .dat 格式文件');
+        message.error('只支持 .dat 和 .zip 格式文件');
         return Upload.LIST_IGNORE;
       }
 
@@ -238,12 +425,12 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', width: '100%', marginBottom: '24px' }}>
-      <Dragger {...uploadProps} disabled={uploading || configModalOpen}>
+      <Dragger {...uploadProps} disabled={uploading || configModalOpen || zipModalOpen}>
         <p className="ant-upload-drag-icon">
           <InboxOutlined />
         </p>
         <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-        <p className="ant-upload-hint">支持 .dat 格式文件，最大 50MB</p>
+        <p className="ant-upload-hint">支持 .dat 文件或 .zip 压缩包，最大 50MB</p>
       </Dragger>
 
       {pendingFile && (
@@ -257,6 +444,16 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
           }}
         />
       )}
+      
+      <ZipImportModal
+        open={zipModalOpen}
+        files={zipFiles.map(f => ({ name: f.name, size: f.size }))}
+        onConfirm={handleZipImport}
+        onCancel={() => {
+          setZipModalOpen(false);
+          setZipFiles([]);
+        }}
+      />
     </div>
   );
 }

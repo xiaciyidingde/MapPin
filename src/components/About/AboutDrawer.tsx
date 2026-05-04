@@ -1,8 +1,9 @@
-import { Card, Typography, Space } from 'antd';
-import { GithubOutlined } from '@ant-design/icons';
+import { Card, Typography, Space, Button } from 'antd';
+import { GithubOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { VERSION } from '../../version';
 import { appConfig, type LinkItem } from '../../config/appConfig';
+import { getInstallPrompt, isPWA } from '../../utils/registerSW';
 
 const { Title, Paragraph, Link } = Typography;
 
@@ -14,6 +15,8 @@ const TEXT_COLOR_TERTIARY = '#8c8c8c';
 
 export function AboutDrawer() {
   const [failedFavicons, setFailedFavicons] = useState<Set<string>>(new Set());
+  const [showInstallButton, setShowInstallButton] = useState(!isPWA());
+  const installPrompt = getInstallPrompt();
 
   // 从配置文件加载链接
   const links: LinkItem[] = appConfig.author.links;
@@ -22,6 +25,13 @@ export function AboutDrawer() {
 
   const handleFaviconError = (url: string) => {
     setFailedFavicons(prev => new Set(prev).add(url));
+  };
+
+  const handleInstall = async () => {
+    const accepted = await installPrompt.showInstallPrompt();
+    if (accepted) {
+      setShowInstallButton(false);
+    }
   };
 
   return (
@@ -37,10 +47,25 @@ export function AboutDrawer() {
         <Space orientation="vertical" size="large" style={{ width: '100%', display: 'flex' }}>
           {/* 项目介绍 */}
           <Card style={{ boxShadow: CARD_SHADOW }}>
-            <Title level={4} style={{ marginTop: 0 }}>{appConfig.app.name}</Title>
-            <Paragraph style={{ color: TEXT_COLOR_SECONDARY, marginBottom: 0 }}>
-              {appConfig.app.description}
-            </Paragraph>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Title level={4} style={{ marginTop: 0 }}>{appConfig.app.name}</Title>
+                <Paragraph style={{ color: TEXT_COLOR_SECONDARY, marginBottom: 0 }}>
+                  {appConfig.app.description}
+                </Paragraph>
+              </div>
+              {showInstallButton && installPrompt.isInstallable() && (
+                <div style={{ flexShrink: 0 }}>
+                  <Button 
+                    type="primary" 
+                    icon={<DownloadOutlined />}
+                    onClick={handleInstall}
+                  >
+                    安装
+                  </Button>
+                </div>
+              )}
+            </div>
           </Card>
 
           {/* 版本信息 */}
