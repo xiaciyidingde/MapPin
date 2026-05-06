@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse } from 'antd';
 import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
-import { List } from 'react-window';
-import type { RowComponentProps } from 'react-window';
+import { Virtuoso } from 'react-virtuoso';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { anomalyDetectionService } from '../../services/anomalyDetectionService';
 import type { Anomaly } from '../../services/anomalyDetectionService';
@@ -105,7 +104,7 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
     }
   };
 
-  // 渲染单个异常项（用于虚拟列表）
+  // 渲染单个异常项
   const renderAnomalyItem = (anomaly: Anomaly) => (
     <Card size="small" styles={{ body: { padding: '12px' } }} style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -158,16 +157,6 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
       </div>
     </Card>
   );
-
-  // 虚拟列表行渲染器
-  const VirtualRow = ({ index, style, ariaAttributes, anomalies }: RowComponentProps<{ anomalies: Anomaly[] }> & { anomalies: Anomaly[] }) => {
-    const anomaly = anomalies[index];
-    return (
-      <div style={style} {...ariaAttributes}>
-        {renderAnomalyItem(anomaly)}
-      </div>
-    );
-  };
 
   if (!currentFileId) {
     return (
@@ -260,12 +249,10 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
                   key: 'precision',
                   label: `精度异常 (${anomaliesByType.precision.length})`,
                   children: (
-                    <List
+                    <Virtuoso
                       style={{ height: Math.min(400, anomaliesByType.precision.length * 160) }}
-                      rowCount={anomaliesByType.precision.length}
-                      rowHeight={160}
-                      rowComponent={(props) => <VirtualRow {...props} anomalies={anomaliesByType.precision} />}
-                      rowProps={{ anomalies: anomaliesByType.precision }}
+                      totalCount={anomaliesByType.precision.length}
+                      itemContent={(index) => renderAnomalyItem(anomaliesByType.precision[index])}
                     />
                   ),
                 }] : []),
@@ -273,12 +260,10 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
                   key: 'isolated',
                   label: `孤立点 (${anomaliesByType.isolated.length})`,
                   children: (
-                    <List
+                    <Virtuoso
                       style={{ height: Math.min(400, anomaliesByType.isolated.length * 160) }}
-                      rowCount={anomaliesByType.isolated.length}
-                      rowHeight={160}
-                      rowComponent={(props) => <VirtualRow {...props} anomalies={anomaliesByType.isolated} />}
-                      rowProps={{ anomalies: anomaliesByType.isolated }}
+                      totalCount={anomaliesByType.isolated.length}
+                      itemContent={(index) => renderAnomalyItem(anomaliesByType.isolated[index])}
                     />
                   ),
                 }] : []),
@@ -286,12 +271,10 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
                   key: 'duplicate',
                   label: `重复坐标 (${anomaliesByType.duplicate.length})`,
                   children: (
-                    <List
+                    <Virtuoso
                       style={{ height: Math.min(400, anomaliesByType.duplicate.length * 160) }}
-                      rowCount={anomaliesByType.duplicate.length}
-                      rowHeight={160}
-                      rowComponent={(props) => <VirtualRow {...props} anomalies={anomaliesByType.duplicate} />}
-                      rowProps={{ anomalies: anomaliesByType.duplicate }}
+                      totalCount={anomaliesByType.duplicate.length}
+                      itemContent={(index) => renderAnomalyItem(anomaliesByType.duplicate[index])}
                     />
                   ),
                 }] : []),

@@ -382,7 +382,6 @@ function App() {
                   <UploadZone onFileUploaded={() => setDrawerOpen(false)} />
                   <Statistics />
                   <div className="mt-4">
-                    <h3 className="text-base font-semibold mb-3">文件列表</h3>
                     <FileList 
                       onOpenSettings={(fileId) => {
                         setDrawerOpen(false);
