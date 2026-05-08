@@ -75,8 +75,8 @@ export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
     return null;
   }
 
-  // 检查是否包含当前位置点（id 为 'user-location'）
-  const hasUserLocation = selectedPoints.some(p => p.id === 'user-location');
+  // 检查是否包含虚拟点
+  const hasVirtualPoint = selectedPoints.some(p => p.id === 'user-location' || p.id === 'search-marker');
 
   // 计算测量结果
   let spatialDistance = 0;
@@ -86,8 +86,8 @@ export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
   if (selectedPoints.length === 2) {
     spatialDistance = calculateSpatialDistance(selectedPoints[0], selectedPoints[1]);
     planarDistance = calculatePlanarDistance(selectedPoints[0], selectedPoints[1]);
-    // 只有当两个点都不是当前位置时才计算高差
-    if (!hasUserLocation) {
+    // 只有当两个点都不是虚拟点时才计算高差
+    if (!hasVirtualPoint) {
       elevationDiff = calculateElevationDifference(selectedPoints[0], selectedPoints[1]);
     }
   }
@@ -136,8 +136,8 @@ export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
               <div style={{ fontSize: '12px', color: '#666' }}>
                 平面: {formatDistance(planarDistance)}
               </div>
-              {/* 只有当不包含当前位置时才显示高差 */}
-              {!hasUserLocation && (
+              {/* 只有当不包含虚拟点时才显示高差 */}
+              {!hasVirtualPoint && (
                 <div style={{ fontSize: '12px', color: elevationDiff >= 0 ? '#52c41a' : '#ff4d4f' }}>
                   高差: {formatElevation(elevationDiff)}
                 </div>

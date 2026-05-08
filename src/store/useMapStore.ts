@@ -12,6 +12,10 @@ interface MapStore {
   zoom: number;
   setView: (center: LatLng, zoom: number) => void;
 
+  // 地图边界
+  mapBounds: { minX: number; minY: number; maxX: number; maxY: number } | null;
+  setMapBounds: (bounds: { minX: number; minY: number; maxX: number; maxY: number }) => void;
+
   // 用户当前位置
   userLocation: LatLng | null;
   userLocationAccuracy: number | null;
@@ -26,6 +30,10 @@ interface MapStore {
   // 选中的点
   selectedPointId: string | null;
   setSelectedPointId: (id: string | null) => void;
+
+  // 搜索标记
+  searchMarker: { lat: number; lng: number; name: string; address?: string } | null;
+  setSearchMarker: (marker: { lat: number; lng: number; name: string; address?: string } | null) => void;
 
   // 测量工具状态
   measureMode: boolean;
@@ -46,11 +54,13 @@ export const useMapStore = create<MapStore>()(
       currentFileId: null,
       center: { lat: 39.9, lng: 116.4 }, // 北京（默认）
       zoom: 15, // 增加默认缩放级别
+      mapBounds: null,
       userLocation: null,
       userLocationAccuracy: null,
       locationPermissionDenied: false,
       fitToViewTrigger: 0,
       selectedPointId: null,
+      searchMarker: null,
       measureMode: false,
       measurePoints: [],
       baseMapMode: 'map', // 默认使用地图模式
@@ -58,10 +68,12 @@ export const useMapStore = create<MapStore>()(
       // Actions
       setCurrentFileId: (id) => set({ currentFileId: id }),
       setView: (center, zoom) => set({ center, zoom }),
+      setMapBounds: (bounds) => set({ mapBounds: bounds }),
       setUserLocation: (location, accuracy = null) => set({ userLocation: location, userLocationAccuracy: accuracy }),
       setLocationPermissionDenied: (denied) => set({ locationPermissionDenied: denied }),
       triggerFitToView: () => set((state) => ({ fitToViewTrigger: state.fitToViewTrigger + 1 })),
       setSelectedPointId: (id) => set({ selectedPointId: id }),
+      setSearchMarker: (marker) => set({ searchMarker: marker }),
       setMeasureMode: (enabled) =>
         set({ measureMode: enabled, measurePoints: enabled ? [] : [] }),
       addMeasurePoint: (pointId) =>
