@@ -3,14 +3,13 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip } from 'react-l
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { Tag, Button, Modal, Input, message, Popconfirm } from 'antd';
-import { SwapOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SwapOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import { useMapStore, useDataStore, useSettingsStore } from '../../store';
-import { getMarkerIcon, selectedPointIcon, userLocationIcon, selectedUserLocationIcon } from '../../utils/mapIcons';
+import { getMarkerIcon, selectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
 import { FitViewControl } from './FitViewControl';
 import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
 import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken, hasShownTokenWarning, markWarningAsShown } from '../../config/mapTileSources';
-import { coordinateConverter } from '../../services/coordinateConverter';
 import type { MeasurementPoint } from '../../types';
 import type { Marker as LeafletMarker } from 'leaflet';
 import { appConfig } from '../../config/appConfig';
@@ -352,6 +351,38 @@ function MapCenterUpdater() {
   return null;
 }
 
+// 地图边界更新组件（用于搜索）
+function MapBoundsUpdater() {
+  const map = useMap();
+  const setMapBounds = useMapStore((state) => state.setMapBounds);
+
+  useEffect(() => {
+    const updateBounds = () => {
+      const bounds = map.getBounds();
+      setMapBounds({
+        minX: bounds.getWest(),
+        minY: bounds.getSouth(),
+        maxX: bounds.getEast(),
+        maxY: bounds.getNorth(),
+      });
+    };
+
+    // 初始更新
+    updateBounds();
+
+    // 监听地图移动和缩放
+    map.on('moveend', updateBounds);
+    map.on('zoomend', updateBounds);
+
+    return () => {
+      map.off('moveend', updateBounds);
+      map.off('zoomend', updateBounds);
+    };
+  }, [map, setMapBounds]);
+
+  return null;
+}
+
 // 选中点位 Popup 打开组件
 function SelectedPointPopupOpener({ markerRefs }: { markerRefs: React.MutableRefObject<Map<string, LeafletMarker>> }) {
   const selectedPointId = useMapStore((state) => state.selectedPointId);
@@ -399,8 +430,9 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const userLocation = useMapStore((state) => state.userLocation);
   const userLocationAccuracy = useMapStore((state) => state.userLocationAccuracy);
   const baseMapMode = useMapStore((state) => state.baseMapMode);
+  const searchMarker = useMapStore((state) => state.searchMarker);
+  const setSearchMarker = useMapStore((state) => state.setSearchMarker);
   const points = useDataStore((state) => state.points);
-  const files = useDataStore((state) => state.files);
   const locationPermissionDenied = useMapStore((state) => state.locationPermissionDenied);
   
   // 地图设置
@@ -702,33 +734,15 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
               if (measureActive) {
                 e.originalEvent.stopPropagation();
                 
-                // 获取当前文件的投影配置
-                const currentFile = currentFileId ? files.find(f => f.id === currentFileId) : null;
-                
-                // 将经纬度转换为投影坐标
-                let projectedX = userLocation.lng;
-                let projectedY = userLocation.lat;
-                
-                if (currentFile) {
-                  const projected = coordinateConverter.projectFromWGS84(
-                    userLocation.lat,
-                    userLocation.lng,
-                    currentFile.projectionConfig.coordinateSystem,
-                    currentFile.projectionConfig.projectionType,
-                    currentFile.projectionConfig.centralMeridian
-                  );
-                  projectedX = projected.x;
-                  projectedY = projected.y;
-                }
-                
                 // 创建虚拟的 MeasurementPoint 对象
+                // 对于虚拟点，直接使用经纬度作为 x, y 坐标
                 const userLocationPoint: MeasurementPoint = {
                   id: 'user-location',
                   fileId: 'virtual', // 虚拟文件ID
                   pointNumber: '当前位置',
                   originalPointNumber: '当前位置',
-                  x: projectedX, // 使用投影坐标
-                  y: projectedY, // 使用投影坐标
+                  x: userLocation.lng, // 使用经度作为 x
+                  y: userLocation.lat, // 使用纬度作为 y
                   z: 0, // 高程未知，设为 0
                   lat: userLocation.lat,
                   lng: userLocation.lng,
@@ -788,7 +802,81 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
         </Marker>
       )}
 
+      {/* 搜索标记 */}
+      {searchMarker && (
+        <Marker
+          position={[searchMarker.lat, searchMarker.lng]}
+          icon={selectedPointIds.includes('search-marker') ? selectedSearchMarkerIcon : searchMarkerIcon}
+          zIndexOffset={1100}
+          eventHandlers={{
+            click: (e) => {
+              // 测量模式下允许选择搜索标记
+              if (measureActive) {
+                e.originalEvent.stopPropagation();
+                
+                // 创建虚拟的 MeasurementPoint 对象
+                // 对于虚拟点，直接使用经纬度作为 x, y 坐标
+                const searchMarkerPoint: MeasurementPoint = {
+                  id: 'search-marker',
+                  fileId: 'virtual',
+                  pointNumber: searchMarker.name,
+                  originalPointNumber: searchMarker.name,
+                  x: searchMarker.lng, // 使用经度作为 x
+                  y: searchMarker.lat, // 使用纬度作为 y
+                  z: 0, // 高程设为 0
+                  lat: searchMarker.lat,
+                  lng: searchMarker.lng,
+                  type: 'survey',
+                  order: -1,
+                };
+                
+                measureToolRef.current?.selectPoint(searchMarkerPoint);
+              }
+            },
+          }}
+        >
+          {!measureActive && (
+            <Popup>
+              <div style={{ padding: '8px 10px', minWidth: 200 }}>
+                {/* 标题 */}
+                <div style={{ 
+                  fontSize: 18, 
+                  fontWeight: 600,
+                  color: '#fa8c16',
+                  marginBottom: 8
+                }}>
+                  {searchMarker.name}
+                </div>
+
+                {/* 地址 */}
+                {searchMarker.address && (
+                  <div style={{ 
+                    fontSize: 14, 
+                    color: '#8c8c8c',
+                    marginBottom: 12
+                  }}>
+                    {searchMarker.address}
+                  </div>
+                )}
+
+                {/* 清除按钮 */}
+                <Button
+                  size="small"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() => setSearchMarker(null)}
+                  block
+                >
+                  清除标记
+                </Button>
+              </div>
+            </Popup>
+          )}
+        </Marker>
+      )}
+
       <MapCenterUpdater />
+      <MapBoundsUpdater />
       <AttributionController baseMapMode={baseMapMode} />
       <MeasureModeStyle active={measureActive} />
       <SelectedPointPopupOpener markerRefs={markerRefs} />

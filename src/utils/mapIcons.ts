@@ -97,3 +97,47 @@ export const selectedUserLocationIcon = L.divIcon({
   iconAnchor: [18, 42],
   popupAnchor: [0, -42],
 });
+
+// 创建搜索标记图标（橙色）
+export const searchMarkerIcon = L.divIcon({
+  className: 'custom-marker-icon',
+  html: `
+    <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <!-- 阴影 -->
+      <ellipse cx="16" cy="40" rx="6" ry="2" fill="rgba(0,0,0,0.25)"/>
+      <!-- 定位针（水滴形状） -->
+      <path d="M16 2 C9 2 3 8 3 15 C3 22 16 38 16 38 C16 38 29 22 29 15 C29 8 23 2 16 2 Z" 
+            fill="#fa8c16" 
+            stroke="white" 
+            stroke-width="2"
+            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+      <!-- 中心圆点 -->
+      <circle cx="16" cy="15" r="4" fill="white"/>
+    </svg>
+  `,
+  iconSize: [32, 42],
+  iconAnchor: [16, 38],
+  popupAnchor: [0, -38],
+});
+
+// 创建选中状态的搜索标记图标（红色）
+export const selectedSearchMarkerIcon = L.divIcon({
+  className: 'custom-marker-icon',
+  html: `
+    <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+      <!-- 阴影 -->
+      <ellipse cx="16" cy="40" rx="6" ry="2" fill="rgba(0,0,0,0.25)"/>
+      <!-- 定位针（水滴形状） -->
+      <path d="M16 2 C9 2 3 8 3 15 C3 22 16 38 16 38 C16 38 29 22 29 15 C29 8 23 2 16 2 Z" 
+            fill="#ff4d4f" 
+            stroke="white" 
+            stroke-width="2"
+            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+      <!-- 中心圆点 -->
+      <circle cx="16" cy="15" r="4" fill="white"/>
+    </svg>
+  `,
+  iconSize: [32, 42],
+  iconAnchor: [16, 38],
+  popupAnchor: [0, -38],
+});
