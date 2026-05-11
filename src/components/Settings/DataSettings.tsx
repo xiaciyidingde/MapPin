@@ -1,21 +1,36 @@
 import { Button, Card, Flex, message, Modal } from 'antd';
-import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined } from '@ant-design/icons';
+import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { ExportConfigModal, type ExportConfig } from '../FileUpload/ExportConfigModal';
 import { RecycleBinDrawer } from './RecycleBinDrawer';
+import { FileMergeModal } from '../FileMerge/FileMergeModal';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
 import { exportFile, exportMultipleFiles } from '../../services/exportService';
 import { db } from '../../db/schema';
 import type { MeasurementFile, MeasurementPoint } from '../../types/measurement';
 
-export function DataSettings() {
+interface DataSettingsProps {
+  onCloseDrawer?: () => void;
+}
+
+export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
   const { files, loadPoints, clearRecycleBin, loadFiles } = useDataStore();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [recycleBinOpen, setRecycleBinOpen] = useState(false);
+  const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [exportMode, setExportMode] = useState<'current' | 'all'>('current');
   const [exporting, setExporting] = useState(false);
+
+  // 打开文件合并
+  const handleOpenMerge = () => {
+    if (files.length < 2) {
+      message.warning('至少需要 2 个文件才能合并');
+      return;
+    }
+    setMergeModalOpen(true);
+  };
 
   // 导出当前文件
   const handleExportCurrent = () => {
@@ -190,9 +205,43 @@ export function DataSettings() {
         open={recycleBinOpen}
         onClose={() => setRecycleBinOpen(false)}
       />
+
+      <FileMergeModal
+        open={mergeModalOpen}
+        onClose={() => setMergeModalOpen(false)}
+        onSuccess={() => {
+          setMergeModalOpen(false);
+          onCloseDrawer?.();
+        }}
+      />
       
       <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
         <Flex vertical gap={16} style={{ width: '100%', maxWidth: 600 }}>
+        {/* 文件合并卡片 */}
+        <Card size="small">
+          <Flex vertical gap={12}>
+            <Flex align="center" gap={8}>
+              <MergeCellsOutlined style={{ fontSize: 18, color: '#52c41a' }} />
+              <span className="font-semibold">文件合并</span>
+            </Flex>
+            <div className="text-sm text-gray-600">
+              将多个测量文件合并为一个文件，统一管理点位数据
+            </div>
+            <Button 
+              icon={<MergeCellsOutlined />}
+              onClick={handleOpenMerge}
+              disabled={files.length < 2}
+            >
+              合并文件
+            </Button>
+            {files.length < 2 && (
+              <div className="text-xs text-gray-500">
+                💡 至少需要 2 个文件才能合并
+              </div>
+            )}
+          </Flex>
+        </Card>
+
         {/* 数据导出卡片 */}
         <Card size="small">
           <Flex vertical gap={12}>
