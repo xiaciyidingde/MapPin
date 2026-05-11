@@ -3,6 +3,7 @@ import { Modal, Form, Input, InputNumber, message } from 'antd';
 import { v4 as uuidv4 } from 'uuid';
 import { useDataStore, useMapStore } from '../../store';
 import { coordinateConverter } from '../../services/coordinateConverter';
+import { isValidPointNumber } from '../../utils/sanitize';
 import type { MeasurementPoint } from '../../types';
 
 interface AddPointModalProps {
@@ -79,6 +80,13 @@ export function AddPointModal({ open, onClose }: AddPointModalProps) {
       
       if (!currentFile) {
         message.error('文件不存在');
+        setLoading(false);
+        return;
+      }
+
+      // 验证点号格式
+      if (!isValidPointNumber(values.pointNumber)) {
+        message.error('点号格式不正确，只允许字母、数字、中文、下划线和连字符');
         setLoading(false);
         return;
       }

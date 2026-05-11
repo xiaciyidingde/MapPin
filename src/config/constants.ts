@@ -58,8 +58,8 @@ export const POINT_NUMBER = {
 
 // 文件名配置
 export const FILE_NAME = {
-  // 允许的字符正则表达式
-  VALID_PATTERN: /^[\u4e00-\u9fa5a-zA-Z0-9_-\s]+$/,
+  // 允许的字符正则表达式（允许中文、字母、数字、下划线、连字符、空格、括号）
+  VALID_PATTERN: /^[\u4e00-\u9fa5a-zA-Z0-9_\-\s()（）]+$/,
 } as const;
 
 // 地图配置（从 app.config.json 加载）

@@ -1,4 +1,4 @@
-import { Button, Card, Flex, message, Modal } from 'antd';
+import { Button, Card, Flex, message, Modal, Checkbox } from 'antd';
 import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { ExportConfigModal, type ExportConfig } from '../FileUpload/ExportConfigModal';
@@ -22,6 +22,12 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
   const [exportMode, setExportMode] = useState<'current' | 'all'>('current');
   const [exporting, setExporting] = useState(false);
+  const [clearDataModalOpen, setClearDataModalOpen] = useState(false);
+  const [clearOptions, setClearOptions] = useState({
+    files: true,
+    recycleBin: true,
+    settings: false,
+  });
 
   // 打开文件合并
   const handleOpenMerge = () => {
@@ -146,47 +152,57 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
 
   // 清除所有数据
   const handleClearAllData = () => {
-    Modal.confirm({
-      title: '⚠️ 危险操作',
-      content: (
-        <div>
-          <p>此操作将删除所有文件和点位数据，包括：</p>
-          <ul style={{ marginTop: 8, paddingLeft: 20 }}>
-            <li>所有导入的测量文件</li>
-            <li>所有点位数据</li>
-            <li>回收站中的数据</li>
-            <li>所有设置和配置</li>
-          </ul>
-          <p style={{ marginTop: 8, color: '#ff4d4f', fontWeight: 'bold' }}>
-            此操作无法恢复，请谨慎操作！
-          </p>
-        </div>
-      ),
-      okText: '确认清除',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      centered: true,
-      onOk: async () => {
-        try {
-          // 清除所有数据库表
-          await db.files.clear();
-          await db.points.clear();
-          await db.recycleBin.clear();
-          await db.settings.clear();
-          
-          // 重新加载文件列表（会变成空）
-          await loadFiles();
-          
-          message.success('所有数据已清除');
-          
-          // 刷新页面以重置应用状态
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
-        } catch (error) {
-          message.error('清除失败：' + (error instanceof Error ? error.message : '未知错误'));
-        }
-      },
+    setClearDataModalOpen(true);
+  };
+
+  // 确认清除数据
+  const handleConfirmClearData = async () => {
+    try {
+      // 根据选择清除对应数据
+      if (clearOptions.files) {
+        await db.files.clear();
+        await db.points.clear();
+      }
+      
+      if (clearOptions.recycleBin) {
+        await db.recycleBin.clear();
+      }
+      
+      if (clearOptions.settings) {
+        await db.settings.clear();
+        // 清除 localStorage 中的 Zustand 持久化数据
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('mappin-')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+      
+      // 重新加载文件列表
+      await loadFiles();
+      
+      message.success('选中的数据已清除');
+      setClearDataModalOpen(false);
+      
+      // 如果清除了设置，刷新页面以重置应用状态
+      if (clearOptions.settings) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    } catch (error) {
+      message.error('清除失败：' + (error instanceof Error ? error.message : '未知错误'));
+    }
+  };
+
+  // 取消清除数据
+  const handleCancelClearData = () => {
+    setClearDataModalOpen(false);
+    // 重置选项为默认值
+    setClearOptions({
+      files: true,
+      recycleBin: true,
+      settings: false,
     });
   };
 
@@ -214,6 +230,47 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
           onCloseDrawer?.();
         }}
       />
+
+      {/* 清除数据确认模态框 */}
+      <Modal
+        title="⚠️ 危险操作"
+        open={clearDataModalOpen}
+        onOk={handleConfirmClearData}
+        onCancel={handleCancelClearData}
+        okText="确认清除"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+        centered
+      >
+        <div>
+          <p>此操作将删除选中的数据，包括：</p>
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <Checkbox 
+              checked={clearOptions.files}
+              onChange={(e) => setClearOptions(prev => ({ ...prev, files: e.target.checked }))}
+            >
+              所有导入文件和点位数据
+            </Checkbox>
+            <br />
+            <Checkbox 
+              checked={clearOptions.recycleBin}
+              onChange={(e) => setClearOptions(prev => ({ ...prev, recycleBin: e.target.checked }))}
+            >
+              回收站数据
+            </Checkbox>
+            <br />
+            <Checkbox 
+              checked={clearOptions.settings}
+              onChange={(e) => setClearOptions(prev => ({ ...prev, settings: e.target.checked }))}
+            >
+              设置和配置
+            </Checkbox>
+          </div>
+          <p style={{ marginTop: 8, color: '#ff4d4f', fontWeight: 'bold' }}>
+            此操作无法恢复，请谨慎操作！
+          </p>
+        </div>
+      </Modal>
       
       <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
         <Flex vertical gap={16} style={{ width: '100%', maxWidth: 600 }}>

@@ -50,9 +50,9 @@ export function sanitizeFileName(fileName: string): string {
   const name = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
   const ext = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : '';
   
-  // 移除不安全字符，只保留安全字符
+  // 移除不安全字符，只保留安全字符（包括括号）
   const sanitized = name
-    .replace(/[^\u4e00-\u9fa5a-zA-Z0-9_\-\s]/g, '_') // 替换不安全字符为下划线
+    .replace(/[^\u4e00-\u9fa5a-zA-Z0-9_\-\s()（）]/g, '_') // 替换不安全字符为下划线
     .replace(/\s+/g, '_') // 空格替换为下划线
     .replace(/_+/g, '_') // 多个下划线合并为一个
     .replace(/^_+|_+$/g, ''); // 移除首尾下划线
@@ -145,6 +145,35 @@ export function limitStringLength(str: string, maxLength: number): string {
     return str;
   }
   return str.substring(0, maxLength);
+}
+
+/**
+ * 验证 API Key 是否安全
+ * 只允许字母、数字、下划线、连字符
+ */
+export function isValidApiKey(apiKey: string): boolean {
+  if (!apiKey || apiKey.trim().length === 0) {
+    return true; // 允许空值（用户可能想清空）
+  }
+  
+  // 长度限制
+  if (apiKey.length > 100) {
+    return false;
+  }
+  
+  // 只允许字母、数字、下划线、连字符
+  return /^[a-zA-Z0-9_-]+$/.test(apiKey);
+}
+
+/**
+ * 清理 API Key
+ */
+export function sanitizeApiKey(apiKey: string): string {
+  return apiKey
+    .trim() // 去除首尾空格
+    .replace(/[\r\n\t]/g, '') // 去除换行符、制表符
+    .replace(/[^a-zA-Z0-9_-]/g, '') // 移除不安全字符
+    .substring(0, 100); // 限制长度
 }
 
 /**

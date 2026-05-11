@@ -76,6 +76,10 @@ function App() {
 
   // 打开设置（可指定默认标签页）
   const openSettings = (tab: string = 'global') => {
+    setDrawerOpen(false); // 关闭文件管理抽屉
+    setToolsOpen(false); // 关闭工具抽屉
+    setAboutOpen(false); // 关闭关于抽屉
+    setAddPointOpen(false); // 关闭添加点悬浮窗
     setSettingsTab(tab);
     setSettingsOpen(true);
   };

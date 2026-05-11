@@ -10,7 +10,8 @@ import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
 import { ZipImportModal } from './ZipImportModal';
 import type { ProjectionConfig } from '../../types';
-import { isValidFileName, sanitizeFileName, isValidFileSize, isValidFileType } from '../../utils/sanitize';
+import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { isValidFileSize, isValidFileType } from '../../utils/sanitize';
 
 const { Dragger } = Upload;
 
@@ -27,6 +28,9 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
   const addFile = useDataStore((state) => state.addFile);
   const files = useDataStore((state) => state.files);
   const currentFileId = useMapStore((state) => state.currentFileId);
+  
+  // 使用文件名验证 Hook
+  const { validateFileName } = useFileNameValidation();
   const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
   const triggerFitToView = useMapStore((state) => state.triggerFitToView);
   const maxPointsPerFile = useSettingsStore((state) => state.maxPointsPerFile);
@@ -128,14 +132,10 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
         return;
       }
 
-      // 使用自定义文件名或原文件名，并清理
-      let finalFileName = customFileName || file.name;
-      
-      // 验证和清理文件名
-      if (!isValidFileName(finalFileName)) {
-        finalFileName = sanitizeFileName(finalFileName);
-        message.warning(`文件名包含非法字符，已自动清理为：${finalFileName}`);
-      }
+      // 使用自定义文件名或原文件名，并验证清理
+      const originalFileName = customFileName || file.name;
+      const finalFileName = validateFileName(originalFileName);
+      if (!finalFileName) return;
 
       // 创建文件对象（使用用户配置的投影参数）
       const measurementFile = createMeasurementFile(

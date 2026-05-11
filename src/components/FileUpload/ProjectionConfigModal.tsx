@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { ProjectionConfig } from '../../types';
 import { useMapStore, useSettingsStore } from '../../store';
 import { calculateCentralMeridian } from '../../utils/projectionUtils';
+import { useFileNameValidation } from '../../hooks/useFileNameValidation';
 
 interface ProjectionConfigModalProps {
   open: boolean;
@@ -25,6 +26,9 @@ export function ProjectionConfigModal({
   const globalProjectionType = useSettingsStore((state) => state.projectionType);
   const globalCentralMeridian = useSettingsStore((state) => state.centralMeridian);
   const userLocation = useMapStore((state) => state.userLocation);
+
+  // 使用文件名验证 Hook
+  const { validateFileName } = useFileNameValidation();
 
   const [coordinateSystem, setCoordinateSystem] = useState<'CGCS2000' | 'Beijing54' | 'Xian80' | 'WGS84'>(globalCoordinateSystem);
   const [projectionType, setProjectionType] = useState<'gauss-3' | 'gauss-6'>(globalProjectionType);
@@ -119,16 +123,14 @@ export function ProjectionConfigModal({
   };
 
   const handleConfirm = () => {
-    const trimmedFileName = customFileName.trim();
-    if (!trimmedFileName) {
-      message.error('文件名不能为空');
-      return;
-    }
+    // 使用 Hook 验证文件名
+    const finalFileName = validateFileName(customFileName);
+    if (!finalFileName) return;
     
     // 确保文件名有 .dat 扩展名
-    const finalFileName = trimmedFileName.endsWith('.dat') 
-      ? trimmedFileName 
-      : `${trimmedFileName}.dat`;
+    const fileNameWithExt = finalFileName.endsWith('.dat') 
+      ? finalFileName 
+      : `${finalFileName}.dat`;
     
     onConfirm(
       {
@@ -136,7 +138,7 @@ export function ProjectionConfigModal({
         projectionType,
         centralMeridian,
       },
-      finalFileName !== fileName ? finalFileName : undefined
+      fileNameWithExt !== fileName ? fileNameWithExt : undefined
     );
   };
 
