@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useDataStore } from '../../store';
 import { useMapStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
+import { useFileNameValidation } from '../../hooks/useFileNameValidation';
 import type { MeasurementFile, ProjectionConfig } from '../../types';
 
 interface FileListProps {
@@ -20,6 +21,9 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   const currentFileId = useMapStore((state) => state.currentFileId);
   const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
   const triggerFitToView = useMapStore((state) => state.triggerFitToView);
+  
+  // 使用文件名验证 Hook
+  const { validateFileName } = useFileNameValidation();
   
   const [newFileName, setNewFileName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -43,24 +47,21 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
     }
   };
 
-  // 创建新文件 - 证文件名并打开配置窗口
+  // 创建新文件 - 验证文件名并打开配置窗口
   const handleCreateFile = () => {
-    const trimmedName = newFileName.trim();
-    
-    if (!trimmedName) {
-      message.warning('请输入文件名');
-      return;
-    }
+    // 使用 Hook 验证文件名
+    const finalFileName = validateFileName(newFileName);
+    if (!finalFileName) return;
     
     // 检查文件名是否已存在
-    const existingFile = files.find(f => f.name === trimmedName || f.name === `${trimmedName}.dat`);
+    const existingFile = files.find(f => f.name === finalFileName || f.name === `${finalFileName}.dat`);
     if (existingFile) {
-      message.error(`文件名 "${trimmedName}" 已存在`);
+      message.error(`文件名 "${finalFileName}" 已存在`);
       return;
     }
     
     // 保存文件名并打开配置窗口
-    setPendingFileName(trimmedName);
+    setPendingFileName(finalFileName);
     setConfigModalOpen(true);
   };
   

@@ -1,9 +1,10 @@
-import { Form, InputNumber, Space, Select, Input, Alert, Button } from 'antd';
+import { Form, InputNumber, Space, Select, Input, Alert, Button, message } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useState, useMemo } from 'react';
 import { useSettingsStore } from '../../store';
 import { MAP_TILE_SOURCES, getMapTileSourceList } from '../../config/mapTileSources';
 import { appConfig } from '../../config/appConfig';
+import { isValidApiKey, sanitizeApiKey } from '../../utils/sanitize';
 
 export function GlobalSettings() {
   const [showToken, setShowToken] = useState(false);
@@ -36,6 +37,24 @@ export function GlobalSettings() {
   const mapSources = getMapTileSourceList();
   const currentSource = MAP_TILE_SOURCES[mapTileSource];
   const requiresToken = currentSource?.requiresToken;
+
+  // 处理 API Key 输入
+  const handleApiKeyChange = (key: 'tianditu' | 'amap', value: string) => {
+    const sanitized = sanitizeApiKey(value);
+    
+    // 如果清理后的值与原值不同，提示用户
+    if (sanitized !== value && value.length > 0) {
+      message.warning('API Key 包含非法字符，已自动清理');
+    }
+    
+    // 验证格式
+    if (sanitized && !isValidApiKey(sanitized)) {
+      message.error('API Key 格式不正确，只允许字母、数字、下划线和连字符，长度不超过100字符');
+      return;
+    }
+    
+    setApiKey(key as 'tianditu' | 'amap', sanitized);
+  };
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
@@ -130,10 +149,11 @@ export function GlobalSettings() {
               >
                 <Input
                   value={apiKeys.tianditu || ''}
-                  onChange={(e) => setApiKey('tianditu', e.target.value)}
+                  onChange={(e) => handleApiKeyChange('tianditu', e.target.value)}
                   placeholder={hasPublicTokens ? "留空使用默认 Token，或输入个人 Token" : "请输入您的天地图 Token"}
                   type="text"
                   autoComplete="off"
+                  maxLength={100}
                   style={{
                     fontFamily: showToken ? 'inherit' : 'monospace',
                     letterSpacing: showToken ? 'normal' : '0.2em',

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useDataStore } from '../../store';
 import { useMapStore } from '../../store';
 import { coordinateConverter } from '../../services/coordinateConverter';
-import { isValidFileName, sanitizeFileName } from '../../utils/sanitize';
+import { useFileNameValidation } from '../../hooks/useFileNameValidation';
 import { calculateCentralMeridian } from '../../utils/projectionUtils';
 import { appConfig } from '../../config/appConfig';
 
@@ -21,6 +21,9 @@ export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
   const updatePoint = useDataStore((state) => state.updatePoint);
   const loadPoints = useDataStore((state) => state.loadPoints);
   const userLocation = useMapStore((state) => state.userLocation);
+  
+  // 使用文件名验证 Hook
+  const { validateFileName } = useFileNameValidation();
 
   // 获取当前文件
   const currentFile = files.find((f) => f.id === fileId);
@@ -112,23 +115,14 @@ export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
   const handleSave = async () => {
     if (!currentFile) return;
 
-    const trimmedFileName = fileName.trim();
-    if (!trimmedFileName) {
-      message.error('文件名不能为空');
-      return;
-    }
-
-    // 验证和清理文件名
-    let finalFileName = trimmedFileName;
-    if (!isValidFileName(finalFileName)) {
-      finalFileName = sanitizeFileName(finalFileName);
-      message.warning(`文件名包含非法字符，已自动清理为：${finalFileName}`);
-    }
+    // 使用 Hook 验证文件名
+    const finalFileName = validateFileName(fileName);
+    if (!finalFileName) return;
 
     // 确保文件名有 .dat 扩展名
-    if (!finalFileName.endsWith('.dat')) {
-      finalFileName = `${finalFileName}.dat`;
-    }
+    const fileNameWithExt = finalFileName.endsWith('.dat') 
+      ? finalFileName 
+      : `${finalFileName}.dat`;
 
     try {
       // 检查坐标系统或投影配置是否变化
@@ -139,7 +133,7 @@ export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
 
       // 更新文件名和投影配置
       await updateFile(currentFile.id, {
-        name: finalFileName,
+        name: fileNameWithExt,
         projectionConfig: {
           coordinateSystem,
           projectionType,

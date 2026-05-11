@@ -9,9 +9,15 @@
     "links": [
       {
         "title": "GitHub",
-        "url": "https://github.com/xiaciyidingde",
+        "url": "https://github.com/xiaciyidingde/MapPin",
         "icon": "github",
-        "description": "github.com/xiaciyidingde"
+        "description": "github.com/xiaciyidingde/MapPin"
+      },
+      {
+        "title": "更新日志",
+        "url": "https://github.com/xiaciyidingde/MapPin/blob/main/CHANGELOG.md",
+        "icon": "github",
+        "description": "https://github.com/xiaciyidingde/MapPin/blob/main/CHANGELOG.md"
       }
     ]
   },

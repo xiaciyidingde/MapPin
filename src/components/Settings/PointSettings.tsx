@@ -1,12 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Button, Input, Dropdown, message, Checkbox, Empty, Modal } from 'antd';
+import { Button, Input, Dropdown, message, Checkbox, Empty } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
 import { useMapStore, useDataStore } from '../../store';
 import { PointCard } from './PointCard';
+import { RenamePointModal } from '../common/RenamePointModal';
+import { usePointRename } from '../../hooks/usePointRename';
 import type { MeasurementPoint } from '../../types';
-import { isValidPointNumber } from '../../utils/sanitize';
 
 type FilterType = 'all' | 'survey' | 'control' | 'manual';
 
@@ -20,10 +21,18 @@ export function PointSettings() {
   const deletePoint = useDataStore((state) => state.deletePoint);
   const [searchText, setSearchText] = useState('');
   const [selectedPointIds, setSelectedPointIds] = useState<string[]>([]);
-  const [renameModalOpen, setRenameModalOpen] = useState(false);
-  const [renamingPoint, setRenamingPoint] = useState<MeasurementPoint | null>(null);
-  const [newPointNumber, setNewPointNumber] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
+
+  // 使用点位重命名 Hook
+  const {
+    renameModalOpen,
+    renamingPoint,
+    newPointNumber,
+    setNewPointNumber,
+    openRenameModal,
+    closeRenameModal,
+    confirmRename,
+  } = usePointRename(currentFileId);
 
   const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
   
@@ -190,56 +199,6 @@ export function PointSettings() {
     }
   }, [currentFileId, deletePoint]);
 
-  // 使用 useCallback 缓存打开重命名函数
-  const handleOpenRename = useCallback((point: MeasurementPoint) => {
-    setRenamingPoint(point);
-    setNewPointNumber(point.pointNumber);
-    setRenameModalOpen(true);
-  }, []);
-
-  // 使用 useCallback 缓存确认重命名函数
-  const handleConfirmRename = useCallback(async () => {
-    if (!currentFileId || !renamingPoint) return;
-    
-    const trimmedName = newPointNumber.trim();
-    
-    if (!trimmedName) {
-      message.error('点号不能为空');
-      return;
-    }
-    
-    // 验证点号格式
-    if (!isValidPointNumber(trimmedName)) {
-      message.error('点号格式不正确，只允许字母、数字、中文、下划线和连字符');
-      return;
-    }
-    
-    if (trimmedName === renamingPoint.pointNumber) {
-      setRenameModalOpen(false);
-      return;
-    }
-    
-    // 检查点号是否已存在
-    const existingPoint = currentPoints.find(
-      p => p.pointNumber === trimmedName && p.id !== renamingPoint.id
-    );
-    
-    if (existingPoint) {
-      message.error(`点号 ${trimmedName} 已存在`);
-      return;
-    }
-    
-    try {
-      await updatePoint(currentFileId, renamingPoint.id, { pointNumber: trimmedName });
-      message.success(`已将点号 ${renamingPoint.pointNumber} 重命名为 ${trimmedName}`);
-      setRenameModalOpen(false);
-      setRenamingPoint(null);
-      setNewPointNumber('');
-    } catch {
-      message.error('重命名失败');
-    }
-  }, [currentFileId, renamingPoint, newPointNumber, currentPoints, updatePoint]);
-
   // 使用 useCallback 缓存切换选中函数
   const handleToggleSelect = useCallback((pointId: string) => {
     setSelectedPointIds((prev) =>
@@ -269,37 +228,14 @@ export function PointSettings() {
   return (
     <div style={{ padding: '16px' }}>
       {/* 重命名对话框 */}
-      <Modal
-        title="重命名点位"
+      <RenamePointModal
         open={renameModalOpen}
-        onOk={handleConfirmRename}
-        onCancel={() => {
-          setRenameModalOpen(false);
-          setRenamingPoint(null);
-          setNewPointNumber('');
-        }}
-        okText="确认"
-        cancelText="取消"
-        centered
-      >
-        <div style={{ marginTop: 16 }}>
-          {renamingPoint?.originalPointNumber && renamingPoint.originalPointNumber !== renamingPoint.pointNumber && (
-            <div style={{ marginBottom: 8, color: '#999', fontSize: 13 }}>
-              原始点号: {renamingPoint.originalPointNumber}
-            </div>
-          )}
-          <div style={{ marginBottom: 8, color: '#666' }}>
-            当前点号: {renamingPoint?.pointNumber}
-          </div>
-          <Input
-            placeholder="请输入新点号"
-            value={newPointNumber}
-            onChange={(e) => setNewPointNumber(e.target.value)}
-            onPressEnter={handleConfirmRename}
-            autoFocus
-          />
-        </div>
-      </Modal>
+        point={renamingPoint}
+        newPointNumber={newPointNumber}
+        onPointNumberChange={setNewPointNumber}
+        onConfirm={confirmRename}
+        onCancel={closeRenameModal}
+      />
 
       {/* 顶部操作区 */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
@@ -356,7 +292,7 @@ export function PointSettings() {
                     isSelected={selectedPointIds.includes(point.id)}
                     onToggleSelect={handleToggleSelect}
                     onToggleType={handleToggleType}
-                    onOpenRename={handleOpenRename}
+                    onOpenRename={openRenameModal}
                     onDelete={handleDeletePoint}
                   />
                 </div>

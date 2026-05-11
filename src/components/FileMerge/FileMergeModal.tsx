@@ -4,6 +4,8 @@ import { QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
 import { dataService } from '../../services/dataService';
+import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { isValidPointNumber } from '../../utils/sanitize';
 import type { MeasurementFile, MeasurementPoint } from '../../types/measurement';
 import dayjs from 'dayjs';
 
@@ -34,6 +36,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
   const currentFileId = useMapStore((state) => state.currentFileId);
   const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
   const triggerFitToView = useMapStore((state) => state.triggerFitToView);
+  
+  // 使用文件名验证 Hook
+  const { validateFileName } = useFileNameValidation();
   
   // 默认选中当前文件
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>(
@@ -128,6 +133,12 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
 
   // 更新文件1的点名
   const updateFile1Name = (pointNumber: string, newName: string) => {
+    // 验证点号格式
+    if (newName && !isValidPointNumber(newName)) {
+      message.warning('点号格式不正确，只允许字母、数字、中文、下划线和连字符');
+      return;
+    }
+    
     setConflicts(prev =>
       prev.map(c => {
         if (c.pointNumber === pointNumber) {
@@ -145,6 +156,12 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
 
   // 更新文件2的点名
   const updateFile2Name = (pointNumber: string, newName: string) => {
+    // 验证点号格式
+    if (newName && !isValidPointNumber(newName)) {
+      message.warning('点号格式不正确，只允许字母、数字、中文、下划线和连字符');
+      return;
+    }
+    
     setConflicts(prev =>
       prev.map(c => {
         if (c.pointNumber === pointNumber) {
@@ -224,6 +241,10 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
     if (selectedFileIds.length < 2) {
       return;
     }
+
+    // 使用 Hook 验证合并文件名
+    const finalFileName = validateFileName(mergedFileName);
+    if (!finalFileName) return;
 
     setMerging(true);
     try {
@@ -307,7 +328,7 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
       const uploadTime = Date.now();
       const newFile: MeasurementFile = {
         id: newFileId,
-        name: `${mergedFileName}.dat`,
+        name: `${finalFileName}.dat`,
         uploadTime,
         pointCount: mergedPoints.length,
         controlPointCount: mergedPoints.filter(p => p.type === 'control').length,

@@ -2,13 +2,15 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
-import { Tag, Button, Modal, Input, message, Popconfirm } from 'antd';
+import { Tag, Button, message, Popconfirm } from 'antd';
 import { SwapOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import { useMapStore, useDataStore, useSettingsStore } from '../../store';
 import { getMarkerIcon, selectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
 import { FitViewControl } from './FitViewControl';
 import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
+import { RenamePointModal } from '../common/RenamePointModal';
+import { usePointRename } from '../../hooks/usePointRename';
 import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken, hasShownTokenWarning, markWarningAsShown } from '../../config/mapTileSources';
 import type { MeasurementPoint } from '../../types';
 import type { Marker as LeafletMarker } from 'leaflet';
@@ -44,8 +46,16 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
   const updateFile = useDataStore((state) => state.updateFile);
   const deletePoint = useDataStore((state) => state.deletePoint);
   
-  const [renameModalOpen, setRenameModalOpen] = useState(false);
-  const [newPointNumber, setNewPointNumber] = useState('');
+  // 使用点位重命名 Hook
+  const {
+    renameModalOpen,
+    renamingPoint,
+    newPointNumber,
+    setNewPointNumber,
+    openRenameModal,
+    closeRenameModal,
+    confirmRename,
+  } = usePointRename(currentFileId);
 
   const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
 
@@ -91,44 +101,7 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
 
   // 打开重命名对话框
   const handleOpenRename = () => {
-    setNewPointNumber(point.pointNumber);
-    setRenameModalOpen(true);
-  };
-
-  // 确认重命名
-  const handleConfirmRename = async () => {
-    if (!currentFileId) return;
-    
-    const trimmedName = newPointNumber.trim();
-    
-    if (!trimmedName) {
-      message.error('点号不能为空');
-      return;
-    }
-    
-    if (trimmedName === point.pointNumber) {
-      setRenameModalOpen(false);
-      return;
-    }
-    
-    // 检查点号是否已存在
-    const existingPoint = currentPoints.find(
-      p => p.pointNumber === trimmedName && p.id !== point.id
-    );
-    
-    if (existingPoint) {
-      message.error(`点号 ${trimmedName} 已存在`);
-      return;
-    }
-    
-    try {
-      await updatePoint(currentFileId, point.id, { pointNumber: trimmedName });
-      message.success(`已将点号 ${point.pointNumber} 重命名为 ${trimmedName}`);
-      setRenameModalOpen(false);
-      setNewPointNumber('');
-    } catch {
-      message.error('重命名失败');
-    }
+    openRenameModal(point);
   };
 
   // 删除点
@@ -277,36 +250,14 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
       </Popup>
 
       {/* 重命名对话框 */}
-      <Modal
-        title="重命名点位"
+      <RenamePointModal
         open={renameModalOpen}
-        onOk={handleConfirmRename}
-        onCancel={() => {
-          setRenameModalOpen(false);
-          setNewPointNumber('');
-        }}
-        okText="确认"
-        cancelText="取消"
-        centered
-      >
-        <div style={{ marginTop: 16 }}>
-          {point.originalPointNumber && point.originalPointNumber !== point.pointNumber && (
-            <div style={{ marginBottom: 8, color: '#999', fontSize: 13 }}>
-              原始点号: {point.originalPointNumber}
-            </div>
-          )}
-          <div style={{ marginBottom: 8, color: '#666' }}>
-            当前点号: {point.pointNumber}
-          </div>
-          <Input
-            placeholder="请输入新点号"
-            value={newPointNumber}
-            onChange={(e) => setNewPointNumber(e.target.value)}
-            onPressEnter={handleConfirmRename}
-            autoFocus
-          />
-        </div>
-      </Modal>
+        point={renamingPoint}
+        newPointNumber={newPointNumber}
+        onPointNumberChange={setNewPointNumber}
+        onConfirm={confirmRename}
+        onCancel={closeRenameModal}
+      />
     </>
   );
 }

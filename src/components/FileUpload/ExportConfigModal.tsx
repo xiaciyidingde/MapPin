@@ -1,5 +1,6 @@
 import { Modal, Checkbox, Flex, Input } from 'antd';
 import { useState, useEffect } from 'react';
+import { useFileNameValidation } from '../../hooks/useFileNameValidation';
 
 interface ExportConfigModalProps {
   open: boolean;
@@ -25,6 +26,9 @@ export function ExportConfigModal({
   mode,
   defaultFileName,
 }: ExportConfigModalProps) {
+  // 使用文件名验证 Hook
+  const { validateFileName } = useFileNameValidation();
+  
   const [config, setConfig] = useState<ExportConfig>({
     includeControlPoints: true,
     includeSurveyPoints: true,
@@ -44,6 +48,15 @@ export function ExportConfigModal({
   }, [defaultFileName]);
 
   const handleConfirm = async () => {
+    // 如果是单文件导出，验证文件名
+    if (mode === 'current' && config.fileName) {
+      const finalFileName = validateFileName(config.fileName);
+      if (!finalFileName) return;
+      
+      // 更新配置中的文件名
+      setConfig({ ...config, fileName: finalFileName });
+    }
+
     await onConfirm(config);
   };
 

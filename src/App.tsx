@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Layout, Drawer, Button, FloatButton, Spin, message, Tabs } from 'antd';
 import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { UploadZone } from './components/FileUpload/UploadZone';
@@ -10,7 +10,11 @@ import { PointSearch } from './components/Search/PointSearch';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
 import { AddPointModal } from './components/AddPoint/AddPointModal';
-import { useDataStore, useMapStore, useSettingsStore } from './store';
+import { useMapStore, useSettingsStore } from './store';
+import { useDrawerManager } from './hooks/useDrawerManager';
+import { useLocationTracking } from './hooks/useLocationTracking';
+import { useTitleAnimation } from './hooks/useTitleAnimation';
+import { useDataLoader } from './hooks/useDataLoader';
 import './App.css';
 
 // 懒加载非首屏组件
@@ -22,69 +26,35 @@ const AboutDrawer = lazy(() => import('./components/About/AboutDrawer').then(mod
 const { Header, Content } = Layout;
 
 function App() {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [fileManagementTab, setFileManagementTab] = useState('files');
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState('global');
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const [toolsTab, setToolsTab] = useState('points');
-  const [fileSettingsOpen, setFileSettingsOpen] = useState(false);
-  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  // 测量工具状态
   const [measureActive, setMeasureActive] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const [addPointOpen, setAddPointOpen] = useState(false);
-  const [showTitle, setShowTitle] = useState(true);
-  const [startAnimation, setStartAnimation] = useState(false);
 
-  // 检测屏幕宽度并控制标题动画
-  useEffect(() => {
-    const checkWidth = () => {
-      // 如果宽度小于 500px，启动动画
-      if (window.innerWidth < 500) {
-        // 1秒后开始动画
-        const timer = setTimeout(() => {
-          setStartAnimation(true);
-          // 动画持续 1 秒后隐藏标题
-          setTimeout(() => {
-            setShowTitle(false);
-          }, 1000);
-        }, 1000);
-        return () => clearTimeout(timer);
-      } else {
-        setShowTitle(true);
-        setStartAnimation(false);
-      }
-    };
+  // 使用自定义 Hooks
+  const {
+    isDrawerOpen,
+    closeDrawer,
+    openFileManagement,
+    openSettings,
+    openTools,
+    openFileSettings,
+    openAbout,
+    openAddPoint,
+    getDrawerTab,
+    getDrawerData,
+    fileManagementTab,
+    setFileManagementTab,
+  } = useDrawerManager();
 
-    checkWidth();
-    window.addEventListener('resize', checkWidth);
-    return () => window.removeEventListener('resize', checkWidth);
-  }, []);
-  const loadFiles = useDataStore((state) => state.loadFiles);
-  const loadPoints = useDataStore((state) => state.loadPoints);
-  const currentFileId = useMapStore((state) => state.currentFileId);
-  const setView = useMapStore((state) => state.setView);
-  const setUserLocation = useMapStore((state) => state.setUserLocation);
-  const userLocation = useMapStore((state) => state.userLocation);
-  const baseMapMode = useMapStore((state) => state.baseMapMode);
-  const setBaseMapMode = useMapStore((state) => state.setBaseMapMode);
-  const locationPermissionDenied = useMapStore((state) => state.locationPermissionDenied);
-  const setLocationPermissionDenied = useMapStore((state) => state.setLocationPermissionDenied);
+  const { showTitle, startAnimation } = useTitleAnimation();
+  const { currentFileId } = useDataLoader();
   
   // 地图设置
   const autoLocate = useSettingsStore((state) => state.autoLocate);
-
-  // 打开设置（可指定默认标签页）
-  const openSettings = (tab: string = 'global') => {
-    setSettingsTab(tab);
-    setSettingsOpen(true);
-  };
-
-  // 打开工具（可指定默认标签页）
-  const openTools = (tab: string = 'points') => {
-    setToolsTab(tab);
-    setToolsOpen(true);
-  };
+  const baseMapMode = useMapStore((state) => state.baseMapMode);
+  const setBaseMapMode = useMapStore((state) => state.setBaseMapMode);
+  
+  // 位置追踪
+  const { handleLocate } = useLocationTracking(autoLocate);
 
   // 打开添加点位 Modal
   const handleAddPoint = () => {
@@ -92,150 +62,8 @@ function App() {
       message.warning('请先打开文件');
       return;
     }
-    setAddPointOpen(true);
+    openAddPoint();
   };
-
-  // 定位到当前位置
-  const handleLocate = () => {
-    if (userLocation) {
-      // 强制触发更新：先设置一个临时的不同值，然后再设置目标值
-      setView({ lat: userLocation.lat + 0.0001, lng: userLocation.lng }, 18);
-      setTimeout(() => {
-        setView(userLocation, 18);
-      }, 10);
-    } else if (navigator.geolocation) {
-      // 高精度定位配置
-      const highAccuracyOptions: PositionOptions = {
-        enableHighAccuracy: true,  // 启用高精度模式（GPS）
-        timeout: 10000,            // 10秒超时
-        maximumAge: 0,             // 不使用缓存
-      };
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          const accuracy = position.coords.accuracy;
-          setUserLocation(location, accuracy);
-          setView(location, 18);
-          setLocationPermissionDenied(false);
-        },
-        (error) => {
-          console.error('无法获取位置:', error);
-          
-          if (error.code === error.PERMISSION_DENIED) {
-            setLocationPermissionDenied(true);
-            message.error({
-              content: '定位权限被拒绝，请在浏览器设置中允许访问位置信息',
-              duration: 5,
-            });
-          } else if (error.code === error.TIMEOUT) {
-            message.warning('定位超时，请确保 GPS 已开启并在户外或窗边');
-          } else {
-            message.error('无法获取位置信息');
-          }
-        },
-        highAccuracyOptions
-      );
-    }
-  };
-
-  // 请求用户位置并定时更新
-  useEffect(() => {
-    let watchId: number | null = null;
-
-    if (navigator.geolocation) {
-      // 高精度定位配置
-      const highAccuracyOptions: PositionOptions = {
-        enableHighAccuracy: true,  // 启用高精度模式（GPS）
-        timeout: 10000,            // 10秒超时
-        maximumAge: 0,             // 不使用缓存，每次都获取新位置
-      };
-
-      // 首次获取位置
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          const accuracy = position.coords.accuracy;
-          setUserLocation(location, accuracy);
-          setLocationPermissionDenied(false);
-          
-          // 只有在启用自动定位时才移动地图视图
-          if (autoLocate) {
-            setView(location, 16);
-          }
-        },
-        (error) => {
-          console.warn('无法获取当前位置:', error.message);
-          
-          if (error.code === error.PERMISSION_DENIED) {
-            setLocationPermissionDenied(true);
-            // 权限被拒绝时不显示消息，避免打扰用户
-            // 用户点击定位按钮时会显示提示
-          } else if (error.code === error.TIMEOUT) {
-            // 超时不算严重错误，可能是 GPS 信号问题
-            console.warn('定位超时，可能是 GPS 信号弱');
-          }
-        },
-        highAccuracyOptions
-      );
-
-      // 只有在权限未被拒绝时才持续监听位置更新
-      if (!locationPermissionDenied) {
-        watchId = navigator.geolocation.watchPosition(
-          (position) => {
-            const location = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            const accuracy = position.coords.accuracy;
-            setUserLocation(location, accuracy);
-            setLocationPermissionDenied(false);
-          },
-          (error) => {
-            console.warn('位置更新失败:', error.message);
-            
-            if (error.code === error.PERMISSION_DENIED) {
-              setLocationPermissionDenied(true);
-              // 停止监听
-              if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-              }
-            }
-          },
-          {
-            enableHighAccuracy: true,  // 启用高精度模式（GPS）
-            timeout: 15000,            // 15秒超时（持续监听可以设置更长）
-            maximumAge: 5000,          // 5秒缓存（减少GPS功耗）
-          }
-        );
-      }
-    }
-
-    // 清理函数
-    return () => {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setView, setUserLocation, autoLocate, setLocationPermissionDenied]);
-
-  useEffect(() => {
-    loadFiles();
-  }, [loadFiles]);
-
-  useEffect(() => {
-    if (currentFileId) {
-      loadPoints(currentFileId);
-    }
-  }, [currentFileId, loadPoints]);
 
   return (
     <ErrorBoundary>
@@ -304,7 +132,13 @@ function App() {
         </div>
         
         {/* 中间搜索框 */}
-        <PointSearch disabled={drawerOpen || settingsOpen || toolsOpen || fileSettingsOpen || aboutOpen} />
+        <PointSearch disabled={
+          isDrawerOpen('fileManagement') || 
+          isDrawerOpen('settings') || 
+          isDrawerOpen('tools') || 
+          isDrawerOpen('fileSettings') || 
+          isDrawerOpen('about')
+        } />
         
         {/* 右侧按钮 */}
         <Button
@@ -324,7 +158,7 @@ function App() {
       <FloatButton.Group shape="circle" style={{ right: 16, bottom: 24 }}>
         <FloatButton
           icon={<QuestionCircleOutlined />}
-          onClick={() => setAboutOpen(true)}
+          onClick={openAbout}
         />
         <FloatButton
           icon={<PlusOutlined />}
@@ -351,7 +185,7 @@ function App() {
         />
         <FloatButton
           icon={<FileTextOutlined />}
-          onClick={() => setDrawerOpen(true)}
+          onClick={openFileManagement}
         />
       </FloatButton.Group>
 
@@ -367,8 +201,8 @@ function App() {
             maxHeight: 'calc(100dvh - 64px)'
           }
         }}
-        onClose={() => setDrawerOpen(false)}
-        open={drawerOpen}
+        onClose={closeDrawer}
+        open={isDrawerOpen('fileManagement')}
       >
         <Tabs
           activeKey={fileManagementTab}
@@ -379,19 +213,14 @@ function App() {
               label: '文件列表',
               children: (
                 <div className="space-y-4">
-                  <UploadZone onFileUploaded={() => setDrawerOpen(false)} />
+                  <UploadZone onFileUploaded={closeDrawer} />
                   <Statistics />
                   <div className="mt-4">
                     <FileList 
                       onOpenSettings={(fileId) => {
-                        setDrawerOpen(false);
-                        setSelectedFileId(fileId);
-                        setFileSettingsOpen(true);
+                        openFileSettings(fileId);
                       }}
-                      onFileSelect={() => {
-                        // 文件被选中后关闭文件管理抽屉
-                        setDrawerOpen(false);
-                      }}
+                      onFileSelect={closeDrawer}
                     />
                   </div>
                 </div>
@@ -400,7 +229,7 @@ function App() {
             {
               key: 'data',
               label: '数据管理',
-              children: <DataSettings onCloseDrawer={() => setDrawerOpen(false)} />,
+              children: <DataSettings onCloseDrawer={closeDrawer} />,
             },
           ]}
           style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
@@ -417,14 +246,12 @@ function App() {
         />
       </Drawer>
 
-
-
       {/* 设置抽屉 - 从底部滑上来，不覆盖标题栏 */}
       <Drawer
         title="设置"
         placement="bottom"
-        onClose={() => setSettingsOpen(false)}
-        open={settingsOpen}
+        onClose={closeDrawer}
+        open={isDrawerOpen('settings')}
         styles={{ 
           body: { padding: 0 },
           wrapper: { 
@@ -436,9 +263,9 @@ function App() {
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
           <SettingsDrawer
-            open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            defaultTab={settingsTab}
+            open={isDrawerOpen('settings')}
+            onClose={closeDrawer}
+            defaultTab={getDrawerTab() || 'global'}
           />
         </Suspense>
       </Drawer>
@@ -447,8 +274,8 @@ function App() {
       <Drawer
         title="工具"
         placement="bottom"
-        onClose={() => setToolsOpen(false)}
-        open={toolsOpen}
+        onClose={closeDrawer}
+        open={isDrawerOpen('tools')}
         styles={{ 
           body: { padding: 0 },
           wrapper: { 
@@ -460,9 +287,9 @@ function App() {
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
           <ToolsDrawer
-            open={toolsOpen}
-            onClose={() => setToolsOpen(false)}
-            defaultTab={toolsTab}
+            open={isDrawerOpen('tools')}
+            onClose={closeDrawer}
+            defaultTab={getDrawerTab() || 'points'}
           />
         </Suspense>
       </Drawer>
@@ -470,12 +297,9 @@ function App() {
       {/* 文件设置对话框 */}
       <Suspense fallback={null}>
         <FileSettings
-          open={fileSettingsOpen}
-          fileId={selectedFileId}
-          onClose={() => {
-            setFileSettingsOpen(false);
-            setSelectedFileId(null);
-          }}
+          open={isDrawerOpen('fileSettings')}
+          fileId={getDrawerData()?.fileId || null}
+          onClose={closeDrawer}
         />
       </Suspense>
 
@@ -483,8 +307,8 @@ function App() {
       <Drawer
         title="关于"
         placement="bottom"
-        onClose={() => setAboutOpen(false)}
-        open={aboutOpen}
+        onClose={closeDrawer}
+        open={isDrawerOpen('about')}
         styles={{ 
           body: { padding: 0 },
           wrapper: { 
@@ -501,8 +325,8 @@ function App() {
 
       {/* 添加点位 Modal */}
       <AddPointModal
-        open={addPointOpen}
-        onClose={() => setAddPointOpen(false)}
+        open={isDrawerOpen('addPoint')}
+        onClose={closeDrawer}
       />
     </Layout>
     </ErrorBoundary>
