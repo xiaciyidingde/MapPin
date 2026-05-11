@@ -400,7 +400,7 @@ function App() {
             {
               key: 'data',
               label: '数据管理',
-              children: <DataSettings />,
+              children: <DataSettings onCloseDrawer={() => setDrawerOpen(false)} />,
             },
           ]}
           style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
