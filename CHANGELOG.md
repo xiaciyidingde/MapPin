@@ -1,5 +1,15 @@
 # 更新日志
 
+## [v1.1.0.0] - 2026-05-11
+
+### 新增自定义 Hooks
+- `useDrawerManager` - 统一抽屉管理，消除重复的打开/关闭逻辑
+- `useLocationTracking` - 封装位置追踪逻辑，自动处理权限和错误
+- `useTitleAnimation` - 封装响应式标题动画逻辑
+- `useDataLoader` - 自动加载文件和点位数据
+
+---
+
 ## [v1.0.12.0] - 2026-05-11
 
 ### 优化
