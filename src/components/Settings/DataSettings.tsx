@@ -309,16 +309,18 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
             <div className="text-sm text-gray-600">
               将测量数据导出为文件，方便备份和分享
             </div>
-            <Flex gap={8} wrap="wrap">
+            <Flex gap={8}>
               <Button 
                 icon={<DownloadOutlined />}
                 onClick={handleExportCurrent}
+                style={{ flex: 1 }}
               >
                 导出当前文件
               </Button>
               <Button 
                 icon={<DownloadOutlined />}
                 onClick={handleExportAll}
+                style={{ flex: 1 }}
               >
                 导出所有文件
               </Button>
@@ -336,14 +338,19 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
             <div className="text-sm text-gray-600">
               查看和管理已删除的文件和点位数据
             </div>
-            <Flex gap={8} wrap="wrap">
-              <Button icon={<EyeOutlined />} onClick={handleViewRecycleBin}>
+            <Flex gap={8}>
+              <Button 
+                icon={<EyeOutlined />} 
+                onClick={handleViewRecycleBin}
+                style={{ flex: 1 }}
+              >
                 查看回收站
               </Button>
               <Button 
                 danger 
                 icon={<DeleteOutlined />}
                 onClick={handleClearRecycleBin}
+                style={{ flex: 1 }}
               >
                 清空回收站
               </Button>
