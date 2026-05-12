@@ -4,6 +4,7 @@ import './ThemeToggle.css';
 export function ThemeToggle() {
   const theme = useMapStore((state) => state.theme);
   const setTheme = useMapStore((state) => state.setTheme);
+  const themeAnimation = useMapStore((state) => state.themeAnimation);
 
   const handleToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -23,6 +24,66 @@ export function ThemeToggle() {
     const yPercent = (y / window.innerHeight) * 100;
     document.documentElement.style.setProperty('--transition-x', `${xPercent}%`);
     document.documentElement.style.setProperty('--transition-y', `${yPercent}%`);
+    
+    // 设置动画类型
+    document.documentElement.setAttribute('data-theme-animation', themeAnimation);
+
+    // 动态设置动画样式
+    if (themeAnimation === 'triple') {
+      // 创建临时样式表覆盖默认动画
+      const style = document.createElement('style');
+      style.id = 'triple-animation-override';
+      style.textContent = `
+        ::view-transition-group(root) {
+          animation-duration: 1s !important;
+        }
+        ::view-transition-old(root) {
+          animation: theme-triple-blur-out 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        ::view-transition-new(root) {
+          animation: theme-triple-expand 1s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+        }
+        
+        @keyframes theme-triple-expand {
+          0% {
+            clip-path: circle(0% at var(--transition-x, 50%) var(--transition-y, 50%));
+            filter: blur(1px);
+          }
+          40% {
+            clip-path: circle(20% at var(--transition-x, 50%) var(--transition-y, 50%));
+            filter: blur(1px);
+          }
+          60% {
+            clip-path: circle(4% at var(--transition-x, 50%) var(--transition-y, 50%));
+            filter: blur(1px);
+          }
+          100% {
+            clip-path: circle(150% at var(--transition-x, 50%) var(--transition-y, 50%));
+            filter: blur(0px);
+          }
+        }
+        
+        @keyframes theme-triple-blur-out {
+          0% {
+            opacity: 1;
+            filter: blur(0px);
+          }
+          40% {
+            opacity: 0.8;
+            filter: blur(1px);
+          }
+          60% {
+            opacity: 0.6;
+            filter: blur(2px);
+          }
+          100% {
+            opacity: 0.3;
+            filter: blur(3px);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     // 使用 View Transition API
     const transition = document.startViewTransition(() => {
@@ -33,6 +94,13 @@ export function ThemeToggle() {
     transition.finished.finally(() => {
       document.documentElement.style.removeProperty('--transition-x');
       document.documentElement.style.removeProperty('--transition-y');
+      document.documentElement.removeAttribute('data-theme-animation');
+      
+      // 清理临时样式
+      const tempStyle = document.getElementById('triple-animation-override');
+      if (tempStyle) {
+        tempStyle.remove();
+      }
     });
   };
 

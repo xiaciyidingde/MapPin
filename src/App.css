@@ -217,6 +217,8 @@ body {
 }
 
 /* View Transition API 主题切换动画 */
+
+/* 默认简单动画 */
 ::view-transition-group(root) {
   animation-duration: 0.8s;
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -248,6 +250,59 @@ body {
   to {
     filter: blur(10px);
     opacity: 0.6;
+  }
+}
+
+/* 三段动画 */
+html[data-theme-animation="triple"] ::view-transition-group(root) {
+  animation-duration: 1s !important;
+}
+
+html[data-theme-animation="triple"] ::view-transition-old(root) {
+  animation: theme-triple-blur-out 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  z-index: 1;
+}
+
+html[data-theme-animation="triple"] ::view-transition-new(root) {
+  animation: theme-triple-expand 1s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  z-index: 2;
+}
+
+@keyframes theme-triple-expand {
+  0% {
+    clip-path: circle(0% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(1px);
+  }
+  40% {
+    clip-path: circle(20% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(1px);
+  }
+  60% {
+    clip-path: circle(4% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(1px);
+  }
+  100% {
+    clip-path: circle(150% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(0px);
+  }
+}
+
+@keyframes theme-triple-blur-out {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  40% {
+    opacity: 0.8;
+    filter: blur(1px);
+  }
+  60% {
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0.3;
+    filter: blur(3px);
   }
 }
 

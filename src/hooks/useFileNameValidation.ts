@@ -1,4 +1,4 @@
-import { message } from 'antd';
+import { App } from 'antd';
 import { isValidFileName, sanitizeFileName } from '../utils/sanitize';
 
 /**
@@ -6,6 +6,8 @@ import { isValidFileName, sanitizeFileName } from '../utils/sanitize';
  * 统一处理文件名的验证和清理逻辑
  */
 export function useFileNameValidation() {
+  const { message } = App.useApp();
+  
   /**
    * 验证并清理文件名
    * @param fileName 原始文件名
