@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Tag, Popconfirm, Empty, Card, Flex, Input, message } from 'antd';
+import { Button, Tag, Popconfirm, Empty, Card, Flex, Input, message, theme } from 'antd';
 import { DeleteOutlined, FileTextOutlined, SettingOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +15,7 @@ interface FileListProps {
 }
 
 export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
+  const { token } = theme.useToken();
   const files = useDataStore((state) => state.files);
   const deleteFile = useDataStore((state) => state.deleteFile);
   const addFile = useDataStore((state) => state.addFile);
@@ -142,7 +143,14 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
       
       {/* 创建文件输入框 - 只在没有打开文件时显示 */}
       {showCreateInput && (
-        <Card size="small" style={{ backgroundColor: '#f0f9ff', borderColor: '#91caff' }}>
+        <Card 
+          size="small" 
+          style={{ 
+            backgroundColor: token.colorFillAlter, 
+            borderColor: token.colorBorder,
+            borderStyle: 'dashed'
+          }}
+        >
           <Flex gap={8} align="center">
             <Input
               placeholder="输入文件名创建新文件"

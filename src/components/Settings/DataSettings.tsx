@@ -1,4 +1,4 @@
-import { Button, Card, Flex, message, Modal, Checkbox } from 'antd';
+import { Button, Card, Flex, message, Modal, Checkbox, theme } from 'antd';
 import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { ExportConfigModal, type ExportConfig } from '../FileUpload/ExportConfigModal';
@@ -15,6 +15,7 @@ interface DataSettingsProps {
 }
 
 export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
+  const { token } = theme.useToken();
   const { files, loadPoints, clearRecycleBin, loadFiles } = useDataStore();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -281,7 +282,7 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
               <MergeCellsOutlined style={{ fontSize: 18, color: '#52c41a' }} />
               <span className="font-semibold">文件合并</span>
             </Flex>
-            <div className="text-sm text-gray-600">
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
               将多个测量文件合并为一个文件，统一管理点位数据
             </div>
             <Button 
@@ -292,7 +293,7 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
               合并文件
             </Button>
             {files.length < 2 && (
-              <div className="text-xs text-gray-500">
+              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
                 💡 至少需要 2 个文件才能合并
               </div>
             )}
@@ -306,19 +307,21 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
               <DownloadOutlined style={{ fontSize: 18, color: '#1890ff' }} />
               <span className="font-semibold">数据导出</span>
             </Flex>
-            <div className="text-sm text-gray-600">
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
               将测量数据导出为文件，方便备份和分享
             </div>
-            <Flex gap={8} wrap="wrap">
+            <Flex gap={8}>
               <Button 
                 icon={<DownloadOutlined />}
                 onClick={handleExportCurrent}
+                style={{ flex: 1 }}
               >
                 导出当前文件
               </Button>
               <Button 
                 icon={<DownloadOutlined />}
                 onClick={handleExportAll}
+                style={{ flex: 1 }}
               >
                 导出所有文件
               </Button>
@@ -333,22 +336,27 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
               <InboxOutlined style={{ fontSize: 18, color: '#faad14' }} />
               <span className="font-semibold">回收站</span>
             </Flex>
-            <div className="text-sm text-gray-600">
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
               查看和管理已删除的文件和点位数据
             </div>
-            <Flex gap={8} wrap="wrap">
-              <Button icon={<EyeOutlined />} onClick={handleViewRecycleBin}>
+            <Flex gap={8}>
+              <Button 
+                icon={<EyeOutlined />} 
+                onClick={handleViewRecycleBin}
+                style={{ flex: 1 }}
+              >
                 查看回收站
               </Button>
               <Button 
                 danger 
                 icon={<DeleteOutlined />}
                 onClick={handleClearRecycleBin}
+                style={{ flex: 1 }}
               >
                 清空回收站
               </Button>
             </Flex>
-            <div className="text-xs text-gray-500">
+            <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
               💡 回收站最多保存 10,000 个项目
             </div>
           </Flex>
@@ -361,7 +369,7 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
               <DatabaseOutlined style={{ fontSize: 18, color: '#ff4d4f' }} />
               <span className="font-semibold">数据管理</span>
             </Flex>
-            <div className="text-sm text-gray-600">
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
               清除应用中的所有数据，恢复到初始状态
             </div>
             <Button 

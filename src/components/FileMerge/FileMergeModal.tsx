@@ -1,4 +1,4 @@
-import { Modal, Checkbox, Input, Radio, Space, Alert, Typography, Flex, Steps, Button, Spin, Table, Popover, message } from 'antd';
+import { Modal, Checkbox, Input, Radio, Space, Alert, Typography, Flex, Steps, Button, Spin, Table, Popover, message, theme } from 'antd';
 import { useState, useMemo, useEffect } from 'react';
 import { QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import { useDataStore } from '../../store/useDataStore';
@@ -32,6 +32,7 @@ interface ConflictPoint {
 }
 
 export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps) {
+  const { token } = theme.useToken();
   const { files, loadPoints, loadFiles } = useDataStore();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
@@ -478,10 +479,10 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
                 style={{
                   maxHeight: 280,
                   overflowY: 'auto',
-                  border: '1px solid #d9d9d9',
+                  border: `1px solid ${token.colorBorder}`,
                   borderRadius: 8,
                   padding: 16,
-                  backgroundColor: '#fafafa',
+                  backgroundColor: token.colorFillAlter,
                 }}
               >
                 <Space orientation="vertical" style={{ width: '100%' }} size="small">
@@ -490,9 +491,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
                       key={file.id}
                       style={{
                         padding: '8px 12px',
-                        backgroundColor: selectedFileIds.includes(file.id) ? '#e6f4ff' : '#fff',
+                        backgroundColor: selectedFileIds.includes(file.id) ? token.colorPrimaryBg : token.colorBgContainer,
                         borderRadius: 6,
-                        border: selectedFileIds.includes(file.id) ? '1px solid #91caff' : '1px solid #d9d9d9',
+                        border: selectedFileIds.includes(file.id) ? `1px solid ${token.colorPrimaryBorder}` : `1px solid ${token.colorBorder}`,
                         transition: 'all 0.3s',
                       }}
                     >
@@ -517,9 +518,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
               <div
                 style={{
                   padding: '12px 16px',
-                  backgroundColor: '#f0f5ff',
+                  backgroundColor: token.colorPrimaryBg,
                   borderRadius: 8,
-                  border: '1px solid #adc6ff',
+                  border: `1px solid ${token.colorPrimaryBorder}`,
                 }}
               >
                 <Text style={{ fontSize: 13 }}>
@@ -544,9 +545,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
                   <div
                     style={{
                       padding: 16,
-                      backgroundColor: '#fafafa',
+                      backgroundColor: token.colorFillAlter,
                       borderRadius: 8,
-                      border: '1px solid #d9d9d9',
+                      border: `1px solid ${token.colorBorder}`,
                       position: 'relative',
                     }}
                   >
@@ -725,9 +726,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
               <div
                 style={{
                   padding: 20,
-                  backgroundColor: '#fafafa',
+                  backgroundColor: token.colorFillAlter,
                   borderRadius: 8,
-                  border: '1px solid #d9d9d9',
+                  border: `1px solid ${token.colorBorder}`,
                 }}
               >
                 <Space orientation="vertical" size="large" style={{ width: '100%' }}>
@@ -755,9 +756,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
                       <div
                         style={{
                           padding: 12,
-                          backgroundColor: '#fff',
+                          backgroundColor: token.colorBgContainer,
                           borderRadius: 6,
-                          border: '1px solid #d9d9d9',
+                          border: `1px solid ${token.colorBorder}`,
                         }}
                       >
                         <Space orientation="vertical" size="small" style={{ width: '100%' }}>

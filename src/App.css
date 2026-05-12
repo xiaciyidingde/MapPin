@@ -1,5 +1,10 @@
 /* App specific styles */
 
+/* 禁用移动端触摸高亮 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* 移动端优化 */
 body {
   -webkit-font-smoothing: antialiased;
@@ -187,4 +192,249 @@ body {
 /* 底图切换动画 */
 .basemap-layer {
   transition: opacity 300ms ease-in-out !important;
+}
+
+/* 深色主题下的地图控件样式 */
+[data-theme="dark"] .leaflet-control-zoom a,
+[data-theme="dark"] .leaflet-bar a {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .leaflet-control-zoom a:hover,
+[data-theme="dark"] .leaflet-bar a:hover {
+  background-color: #3a3a3a !important;
+}
+
+[data-theme="dark"] .leaflet-popup-content-wrapper {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .leaflet-popup-tip {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .leaflet-control-attribution {
+  background-color: rgba(42, 42, 42, 0.8) !important;
+  color: #a6a6a6 !important;
+}
+
+/* View Transition API 主题切换动画 */
+
+/* 默认简单动画 */
+::view-transition-group(root) {
+  animation-duration: 0.8s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation: theme-blur-out 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  mix-blend-mode: normal;
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  animation: theme-expand 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 2;
+}
+
+@keyframes theme-expand {
+  from {
+    clip-path: circle(0% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(10px);
+  }
+  to {
+    clip-path: circle(150% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(0px);
+  }
+}
+
+@keyframes theme-blur-out {
+  to {
+    filter: blur(10px);
+    opacity: 0.6;
+  }
+}
+
+/* 三段动画 */
+html[data-theme-animation="triple"] ::view-transition-group(root) {
+  animation-duration: 1s !important;
+}
+
+html[data-theme-animation="triple"] ::view-transition-old(root) {
+  animation: theme-triple-blur-out 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  z-index: 1;
+}
+
+html[data-theme-animation="triple"] ::view-transition-new(root) {
+  animation: theme-triple-expand 1s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  z-index: 2;
+}
+
+@keyframes theme-triple-expand {
+  0% {
+    clip-path: circle(0% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(1px);
+  }
+  40% {
+    clip-path: circle(20% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(1px);
+  }
+  60% {
+    clip-path: circle(4% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(1px);
+  }
+  100% {
+    clip-path: circle(150% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(0px);
+  }
+}
+
+@keyframes theme-triple-blur-out {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  40% {
+    opacity: 0.8;
+    filter: blur(1px);
+  }
+  60% {
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0.3;
+    filter: blur(3px);
+  }
+}
+
+/* 降级支持：不支持 View Transition API 的浏览器 */
+@supports not (view-transition-name: none) {
+  [data-theme] {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+/* 悬浮按钮点击动画 */
+.ant-float-btn {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-float-btn:active {
+  animation: float-btn-click 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes float-btn-click {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 设置按钮旋转动画 */
+.settings-button-wrapper {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.settings-button-wrapper.rotating {
+  animation: settings-rotate 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-button-wrapper.rotating-reverse {
+  animation: settings-rotate-reverse 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes settings-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes settings-rotate-reverse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-180deg);
+  }
+}
+
+/* 文件上传区点击动画 */
+.upload-zone-wrapper .ant-upload {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upload-zone-wrapper .ant-upload:active {
+  transform: scale(0.98);
+}
+
+/* 所有按钮点击缩放动画 */
+.ant-btn,
+.ant-modal-footer .ant-btn,
+.ant-drawer-footer .ant-btn {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-btn:active,
+.ant-modal-footer .ant-btn:active,
+.ant-drawer-footer .ant-btn:active {
+  transform: scale(0.95);
+}
+
+/* Radio 单选框点击缩放动画 */
+.ant-radio-wrapper {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-radio-wrapper:active {
+  transform: scale(0.95);
+}
+
+/* Checkbox 复选框点击缩放动画 */
+.ant-checkbox-wrapper {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-checkbox-wrapper:active {
+  transform: scale(0.95);
+}
+
+/* 搜索结果悬浮窗动画 */
+.search-results-popup {
+  animation: search-popup-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes search-popup-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes upload-zone-click {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
 }

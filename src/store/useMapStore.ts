@@ -45,6 +45,14 @@ interface MapStore {
   // 底图模式
   baseMapMode: 'map' | 'grid';
   setBaseMapMode: (mode: 'map' | 'grid') => void;
+
+  // 主题模式
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+
+  // 主题切换动画类型
+  themeAnimation: 'simple' | 'triple';
+  setThemeAnimation: (animation: 'simple' | 'triple') => void;
 }
 
 export const useMapStore = create<MapStore>()(
@@ -64,6 +72,8 @@ export const useMapStore = create<MapStore>()(
       measureMode: false,
       measurePoints: [],
       baseMapMode: 'map', // 默认使用地图模式
+      theme: 'light', // 默认浅色主题
+      themeAnimation: 'simple', // 默认简单动画
 
       // Actions
       setCurrentFileId: (id) => set({ currentFileId: id }),
@@ -82,11 +92,17 @@ export const useMapStore = create<MapStore>()(
         })),
       clearMeasurePoints: () => set({ measurePoints: [] }),
       setBaseMapMode: (mode) => set({ baseMapMode: mode }),
+      setTheme: (theme) => set({ theme }),
+      setThemeAnimation: (animation) => set({ themeAnimation: animation }),
     }),
     {
       name: 'mappin-map-storage',
-      // 只持久化底图模式
-      partialize: (state) => ({ baseMapMode: state.baseMapMode }),
+      // 持久化底图模式、主题和动画类型
+      partialize: (state) => ({ 
+        baseMapMode: state.baseMapMode,
+        theme: state.theme,
+        themeAnimation: state.themeAnimation,
+      }),
     }
   )
 );

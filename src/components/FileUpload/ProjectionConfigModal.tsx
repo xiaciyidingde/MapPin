@@ -1,4 +1,4 @@
-import { Modal, Form, Select, InputNumber, Space, Button, message, Input } from 'antd';
+import { Modal, Form, Select, InputNumber, Space, Button, message, Input, theme } from 'antd';
 import { AimOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import type { ProjectionConfig } from '../../types';
@@ -21,6 +21,7 @@ export function ProjectionConfigModal({
   onCancel,
   okText = '确定并导入', // 默认值
 }: ProjectionConfigModalProps) {
+  const { token } = theme.useToken();
   // 从全局设置读取默认值
   const globalCoordinateSystem = useSettingsStore((state) => state.coordinateSystem);
   const globalProjectionType = useSettingsStore((state) => state.projectionType);
@@ -205,10 +206,11 @@ export function ProjectionConfigModal({
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 11px',
-                border: '1px solid #d9d9d9',
-                borderLeft: 0,
-                background: '#fafafa',
-                color: 'rgba(0, 0, 0, 0.25)',
+                borderTop: `1px solid ${token.colorBorder}`,
+                borderRight: `1px solid ${token.colorBorder}`,
+                borderBottom: `1px solid ${token.colorBorder}`,
+                background: token.colorBgContainer,
+                color: token.colorTextSecondary,
               }}
             >
               °E
@@ -216,7 +218,11 @@ export function ProjectionConfigModal({
             <Button
               icon={<AimOutlined />}
               onClick={handleAutoCalculate}
-              style={{ borderLeft: 0 }}
+              style={{ 
+                borderTop: `1px solid ${token.colorBorder}`,
+                borderRight: `1px solid ${token.colorBorder}`,
+                borderBottom: `1px solid ${token.colorBorder}`
+              }}
               title={userLocation ? '根据当前位置自动计算' : '点击获取位置并自动计算'}
             />
           </Space.Compact>

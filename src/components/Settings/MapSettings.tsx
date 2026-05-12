@@ -1,7 +1,8 @@
-import { Form, Switch, Select, InputNumber, Space } from 'antd';
+import { Form, Switch, Select, InputNumber, Space, theme } from 'antd';
 import { useSettingsStore } from '../../store';
 
 export function MapSettings() {
+  const { token } = theme.useToken();
   // 投影配置
   const coordinateSystem = useSettingsStore((state) => state.coordinateSystem);
   const setCoordinateSystem = useSettingsStore((state) => state.setCoordinateSystem);
@@ -65,10 +66,11 @@ export function MapSettings() {
                   display: 'flex',
                   alignItems: 'center',
                   padding: '0 11px',
-                  border: '1px solid #d9d9d9',
-                  borderLeft: 0,
-                  background: '#fafafa',
-                  color: 'rgba(0, 0, 0, 0.25)',
+                  borderTop: `1px solid ${token.colorBorder}`,
+                  borderRight: `1px solid ${token.colorBorder}`,
+                  borderBottom: `1px solid ${token.colorBorder}`,
+                  background: token.colorBgContainer,
+                  color: token.colorTextSecondary,
                 }}
               >
                 °E

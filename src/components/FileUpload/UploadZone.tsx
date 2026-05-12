@@ -425,13 +425,15 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', width: '100%', marginBottom: '24px' }}>
-      <Dragger {...uploadProps} disabled={uploading || configModalOpen || zipModalOpen}>
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined />
-        </p>
-        <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-        <p className="ant-upload-hint">支持 .dat 文件或 .zip 压缩包，最大 50MB</p>
-      </Dragger>
+      <div className="upload-zone-wrapper">
+        <Dragger {...uploadProps} disabled={uploading || configModalOpen || zipModalOpen}>
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined />
+          </p>
+          <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+          <p className="ant-upload-hint">支持 .dat 文件或 .zip 压缩包，最大 50MB</p>
+        </Dragger>
+      </div>
 
       {pendingFile && (
         <ProjectionConfigModal

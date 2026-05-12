@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tabs } from 'antd';
+import { Tabs, theme } from 'antd';
 import { PointSettings } from '../Settings/PointSettings';
 import { AnomalyDetection } from './AnomalyDetection';
 
@@ -11,6 +11,7 @@ interface ToolsDrawerProps {
 
 export function ToolsDrawer({ onClose, defaultTab = 'points' }: ToolsDrawerProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const { token } = theme.useToken();
 
   const items = [
     {
@@ -35,7 +36,7 @@ export function ToolsDrawer({ onClose, defaultTab = 'points' }: ToolsDrawerProps
         tabBarStyle={{ 
           paddingLeft: 16, 
           paddingRight: 16, 
-          background: '#fff', 
+          background: token.colorBgContainer, 
           flexShrink: 0
         }}
         styles={{

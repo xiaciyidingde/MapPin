@@ -1,4 +1,4 @@
-import { Modal, Form, Select, InputNumber, Space, Button, message, Input } from 'antd';
+import { Modal, Form, Select, InputNumber, Space, Button, message, Input, theme } from 'antd';
 import { AimOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { useDataStore } from '../../store';
@@ -15,6 +15,7 @@ interface FileSettingsProps {
 }
 
 export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
+  const { token } = theme.useToken();
   const files = useDataStore((state) => state.files);
   const points = useDataStore((state) => state.points);
   const updateFile = useDataStore((state) => state.updateFile);
@@ -241,10 +242,11 @@ export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 11px',
-                border: '1px solid #d9d9d9',
-                borderLeft: 0,
-                background: '#fafafa',
-                color: 'rgba(0, 0, 0, 0.25)',
+                borderTop: `1px solid ${token.colorBorder}`,
+                borderRight: `1px solid ${token.colorBorder}`,
+                borderBottom: `1px solid ${token.colorBorder}`,
+                background: token.colorBgContainer,
+                color: token.colorTextSecondary,
               }}
             >
               °E
@@ -252,7 +254,11 @@ export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
             <Button
               icon={<AimOutlined />}
               onClick={handleAutoCalculate}
-              style={{ borderLeft: 0 }}
+              style={{ 
+                borderTop: `1px solid ${token.colorBorder}`,
+                borderRight: `1px solid ${token.colorBorder}`,
+                borderBottom: `1px solid ${token.colorBorder}`
+              }}
               title={userLocation ? '根据当前位置自动计算' : '点击获取位置并自动计算'}
             />
           </Space.Compact>

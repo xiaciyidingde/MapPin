@@ -1,4 +1,4 @@
-import { Form, InputNumber, Space, Select, Input, Alert, Button, message } from 'antd';
+import { Form, InputNumber, Space, Select, Input, Alert, Button, message, theme } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useState, useMemo } from 'react';
 import { useSettingsStore } from '../../store';
@@ -8,6 +8,7 @@ import { isValidApiKey, sanitizeApiKey } from '../../utils/sanitize';
 
 export function GlobalSettings() {
   const [showToken, setShowToken] = useState(false);
+  const { token } = theme.useToken();
   
   // 检查是否有公共 Token
   const hasPublicTokens = useMemo(() => {
@@ -192,10 +193,11 @@ export function GlobalSettings() {
               display: 'flex', 
               alignItems: 'center', 
               padding: '0 11px',
-              border: '1px solid #d9d9d9',
-              borderLeft: 0,
-              background: '#fafafa',
-              color: 'rgba(0, 0, 0, 0.25)'
+              borderTop: `1px solid ${token.colorBorder}`,
+              borderRight: `1px solid ${token.colorBorder}`,
+              borderBottom: `1px solid ${token.colorBorder}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary
             }}>
               m
             </div>
@@ -216,10 +218,11 @@ export function GlobalSettings() {
               display: 'flex', 
               alignItems: 'center', 
               padding: '0 11px',
-              border: '1px solid #d9d9d9',
-              borderLeft: 0,
-              background: '#fafafa',
-              color: 'rgba(0, 0, 0, 0.25)'
+              borderTop: `1px solid ${token.colorBorder}`,
+              borderRight: `1px solid ${token.colorBorder}`,
+              borderBottom: `1px solid ${token.colorBorder}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary
             }}>
               m
             </div>
@@ -240,10 +243,11 @@ export function GlobalSettings() {
               display: 'flex', 
               alignItems: 'center', 
               padding: '0 11px',
-              border: '1px solid #d9d9d9',
-              borderLeft: 0,
-              background: '#fafafa',
-              color: 'rgba(0, 0, 0, 0.25)'
+              borderTop: `1px solid ${token.colorBorder}`,
+              borderRight: `1px solid ${token.colorBorder}`,
+              borderBottom: `1px solid ${token.colorBorder}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary
             }}>
               m
             </div>
@@ -264,10 +268,11 @@ export function GlobalSettings() {
               display: 'flex', 
               alignItems: 'center', 
               padding: '0 11px',
-              border: '1px solid #d9d9d9',
-              borderLeft: 0,
-              background: '#fafafa',
-              color: 'rgba(0, 0, 0, 0.25)'
+              borderTop: `1px solid ${token.colorBorder}`,
+              borderRight: `1px solid ${token.colorBorder}`,
+              borderBottom: `1px solid ${token.colorBorder}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary
             }}>
               倍
             </div>
@@ -297,10 +302,11 @@ export function GlobalSettings() {
               display: 'flex', 
               alignItems: 'center', 
               padding: '0 11px',
-              border: '1px solid #d9d9d9',
-              borderLeft: 0,
-              background: '#fafafa',
-              color: 'rgba(0, 0, 0, 0.25)'
+              borderTop: `1px solid ${token.colorBorder}`,
+              borderRight: `1px solid ${token.colorBorder}`,
+              borderBottom: `1px solid ${token.colorBorder}`,
+              background: token.colorBgContainer,
+              color: token.colorTextSecondary
             }}>
               点
             </div>

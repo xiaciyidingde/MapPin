@@ -1,6 +1,7 @@
-import { Tabs } from 'antd';
+import { Tabs, theme } from 'antd';
 import { GlobalSettings } from './GlobalSettings';
 import { MapSettings } from './MapSettings';
+import { UISettings } from './UISettings';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -9,6 +10,8 @@ interface SettingsDrawerProps {
 }
 
 export function SettingsDrawer({ defaultTab = 'global' }: SettingsDrawerProps) {
+  const { token } = theme.useToken();
+
   const items = [
     {
       key: 'global',
@@ -19,6 +22,11 @@ export function SettingsDrawer({ defaultTab = 'global' }: SettingsDrawerProps) {
       key: 'map',
       label: '地图设置',
       children: <MapSettings />,
+    },
+    {
+      key: 'ui',
+      label: '界面设置',
+      children: <UISettings />,
     },
   ];
 
@@ -31,7 +39,7 @@ export function SettingsDrawer({ defaultTab = 'global' }: SettingsDrawerProps) {
         tabBarStyle={{ 
           paddingLeft: 16, 
           paddingRight: 16, 
-          background: '#fff', 
+          background: token.colorBgContainer, 
           flexShrink: 0
         }}
         styles={{
