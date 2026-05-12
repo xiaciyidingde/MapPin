@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Input, Tag, Empty, Dropdown, Button, Spin, message } from 'antd';
+import { Input, Tag, Empty, Dropdown, Button, Spin, message, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, CloseCircleFilled, EnvironmentOutlined, GlobalOutlined, DownOutlined } from '@ant-design/icons';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
@@ -70,6 +70,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
   const searchRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const { token } = theme.useToken();
   
   const currentFileId = useMapStore((state) => state.currentFileId);
   const setView = useMapStore((state) => state.setView);
@@ -476,8 +477,8 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
         size="large"
         style={{
           borderRadius: 24,
-          backgroundColor: 'white',
-          border: '2px solid #e0e0e0',
+          backgroundColor: token.colorBgContainer,
+          border: `2px solid ${token.colorBorder}`,
           height: 44,
           position: 'relative',
           zIndex: 11
@@ -508,7 +509,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
               transform: 'translateX(-50%)',
               width: 'calc(100% - 32px)',
               maxWidth: 400,
-              backgroundColor: 'white',
+              backgroundColor: token.colorBgElevated,
               borderRadius: 12,
               boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
               maxHeight: 320,
@@ -529,9 +530,9 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                     <div style={{ 
                       padding: '8px 16px', 
                       fontSize: 12, 
-                      color: '#8c8c8c',
-                      borderBottom: '1px solid #f0f0f0',
-                      backgroundColor: '#fafafa'
+                      color: token.colorTextSecondary,
+                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                      backgroundColor: token.colorBgContainer
                     }}>
                       找到 {matchedPoints.length} 个匹配点位
                     </div>
@@ -549,19 +550,19 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                     style={{
                       padding: '14px 16px',
                       cursor: 'pointer',
-                      borderBottom: index < Math.min(matchedPoints.length, 500) - 1 ? '1px solid #f0f0f0' : 'none',
+                      borderBottom: index < Math.min(matchedPoints.length, 500) - 1 ? `1px solid ${token.colorBorderSecondary}` : 'none',
                       transition: 'all 0.2s',
-                      backgroundColor: 'white'
+                      backgroundColor: token.colorBgElevated
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f5f9ff';
+                      e.currentTarget.style.backgroundColor = token.colorBgContainer;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'white';
+                      e.currentTarget.style.backgroundColor = token.colorBgElevated;
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 16, fontWeight: 500, color: '#262626' }}>
+                      <span style={{ fontSize: 16, fontWeight: 500, color: token.colorText }}>
                         {highlightText(point.pointNumber, searchText)}
                       </span>
                       <Tag 
@@ -571,7 +572,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                         {point.type === 'control' ? '控制点' : '碎部点'}
                       </Tag>
                     </div>
-                    <div style={{ fontSize: 13, color: '#8c8c8c', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: 13, color: token.colorTextSecondary, fontFamily: 'monospace' }}>
                       X: {point.x.toFixed(3)} Y: {point.y.toFixed(3)} Z: {point.z.toFixed(3)}
                     </div>
                   </div>
@@ -582,10 +583,10 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                   <div style={{ 
                     padding: '12px 16px', 
                     fontSize: 12, 
-                    color: '#8c8c8c',
+                    color: token.colorTextSecondary,
                     textAlign: 'center',
-                    backgroundColor: '#fafafa',
-                    borderTop: '1px solid #f0f0f0'
+                    backgroundColor: token.colorBgContainer,
+                    borderTop: `1px solid ${token.colorBorderSecondary}`
                   }}>
                     还有 {matchedPoints.length - 500} 个结果未显示，请输入更多关键词缩小范围
                   </div>
@@ -615,9 +616,9 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                   <div style={{ 
                     padding: '8px 16px', 
                     fontSize: 12, 
-                    color: '#8c8c8c',
-                    borderBottom: '1px solid #f0f0f0',
-                    backgroundColor: '#fafafa'
+                    color: token.colorTextSecondary,
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                    backgroundColor: token.colorBgContainer
                   }}>
                     找到 {placeResults.length} 个地点
                   </div>
@@ -638,22 +639,22 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                         style={{
                           padding: '14px 16px',
                           cursor: 'pointer',
-                          borderBottom: index < placeResults.length - 1 ? '1px solid #f0f0f0' : 'none',
+                          borderBottom: index < placeResults.length - 1 ? `1px solid ${token.colorBorderSecondary}` : 'none',
                           transition: 'all 0.2s',
-                          backgroundColor: 'white'
+                          backgroundColor: token.colorBgElevated
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f5f9ff';
+                          e.currentTarget.style.backgroundColor = token.colorBgContainer;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'white';
+                          e.currentTarget.style.backgroundColor = token.colorBgElevated;
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                           <GlobalOutlined style={{ color: '#52c41a', fontSize: 18, marginTop: 2 }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                              <span style={{ fontSize: 16, fontWeight: 500, color: '#262626' }}>
+                              <span style={{ fontSize: 16, fontWeight: 500, color: token.colorText }}>
                                 {place.name}
                               </span>
                               {isArea && (
@@ -671,7 +672,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                             {isPOI && (place as TiandituPOI).address && (
                               <div style={{ 
                                 fontSize: 13, 
-                                color: '#8c8c8c', 
+                                color: token.colorTextSecondary, 
                                 marginBottom: 4,
                                 display: 'flex',
                                 justifyContent: 'space-between',
@@ -694,7 +695,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                               </div>
                             )}
                             
-                            <div style={{ fontSize: 12, color: '#bfbfbf', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: 12, color: token.colorTextTertiary, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               {isPOI && (
                                 <>
                                   {(place as TiandituPOI).province && <span>{(place as TiandituPOI).province}</span>}

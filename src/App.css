@@ -188,3 +188,72 @@ body {
 .basemap-layer {
   transition: opacity 300ms ease-in-out !important;
 }
+
+/* 深色主题下的地图控件样式 */
+[data-theme="dark"] .leaflet-control-zoom a,
+[data-theme="dark"] .leaflet-bar a {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+  border-color: #434343 !important;
+}
+
+[data-theme="dark"] .leaflet-control-zoom a:hover,
+[data-theme="dark"] .leaflet-bar a:hover {
+  background-color: #3a3a3a !important;
+}
+
+[data-theme="dark"] .leaflet-popup-content-wrapper {
+  background-color: #2a2a2a !important;
+  color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .leaflet-popup-tip {
+  background-color: #2a2a2a !important;
+}
+
+[data-theme="dark"] .leaflet-control-attribution {
+  background-color: rgba(42, 42, 42, 0.8) !important;
+  color: #a6a6a6 !important;
+}
+
+/* View Transition API 主题切换动画 */
+::view-transition-group(root) {
+  animation-duration: 0.8s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation: theme-blur-out 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  mix-blend-mode: normal;
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  animation: theme-expand 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 2;
+}
+
+@keyframes theme-expand {
+  from {
+    clip-path: circle(0% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(10px);
+  }
+  to {
+    clip-path: circle(150% at var(--transition-x, 50%) var(--transition-y, 50%));
+    filter: blur(0px);
+  }
+}
+
+@keyframes theme-blur-out {
+  to {
+    filter: blur(10px);
+    opacity: 0.6;
+  }
+}
+
+/* 降级支持：不支持 View Transition API 的浏览器 */
+@supports not (view-transition-name: none) {
+  [data-theme] {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}

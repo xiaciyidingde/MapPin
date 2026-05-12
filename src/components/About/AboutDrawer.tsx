@@ -1,4 +1,4 @@
-import { Card, Typography, Space, Button } from 'antd';
+import { Card, Typography, Space, Button, theme } from 'antd';
 import { GithubOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { VERSION } from '../../version';
@@ -7,13 +7,8 @@ import { getInstallPrompt, isPWA } from '../../utils/registerSW';
 
 const { Title, Paragraph, Link } = Typography;
 
-// 提取常量样式
-const CARD_SHADOW = '0 2px 8px rgba(0,0,0,0.06)';
-const TEXT_COLOR_PRIMARY = '#262626';
-const TEXT_COLOR_SECONDARY = '#595959';
-const TEXT_COLOR_TERTIARY = '#8c8c8c';
-
 export function AboutDrawer() {
+  const { token } = theme.useToken();
   const [failedFavicons, setFailedFavicons] = useState<Set<string>>(new Set());
   const [showInstallButton, setShowInstallButton] = useState(!isPWA());
   const installPrompt = getInstallPrompt();
@@ -46,11 +41,11 @@ export function AboutDrawer() {
       <div style={{ width: '100%', maxWidth: 600 }}>
         <Space orientation="vertical" size="large" style={{ width: '100%', display: 'flex' }}>
           {/* 项目介绍 */}
-          <Card style={{ boxShadow: CARD_SHADOW }}>
+          <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Title level={4} style={{ marginTop: 0 }}>{appConfig.app.name}</Title>
-                <Paragraph style={{ color: TEXT_COLOR_SECONDARY, marginBottom: 0 }}>
+                <Title level={4} style={{ marginTop: 0, color: token.colorText }}>{appConfig.app.name}</Title>
+                <Paragraph style={{ color: token.colorTextSecondary, marginBottom: 0 }}>
                   {appConfig.app.description}
                 </Paragraph>
               </div>
@@ -69,21 +64,21 @@ export function AboutDrawer() {
           </Card>
 
           {/* 版本信息 */}
-          <Card style={{ boxShadow: CARD_SHADOW }}>
+          <Card>
             {showAuthor && (
-              <Paragraph style={{ color: TEXT_COLOR_SECONDARY, fontSize: 16, marginBottom: 8 }}>
-                <span style={{ fontWeight: 500, color: TEXT_COLOR_PRIMARY }}>作者：</span>夏次一定de
+              <Paragraph style={{ color: token.colorTextSecondary, fontSize: 16, marginBottom: 8 }}>
+                <span style={{ fontWeight: 500, color: token.colorText }}>作者：</span>夏次一定de
               </Paragraph>
             )}
-            <Paragraph style={{ color: TEXT_COLOR_SECONDARY, fontSize: 16, marginBottom: 0 }}>
-              <span style={{ fontWeight: 500, color: TEXT_COLOR_PRIMARY }}>版本：</span>{VERSION}
+            <Paragraph style={{ color: token.colorTextSecondary, fontSize: 16, marginBottom: 0 }}>
+              <span style={{ fontWeight: 500, color: token.colorText }}>版本：</span>{VERSION}
             </Paragraph>
           </Card>
 
           {/* 相关链接 - 根据配置决定是否显示 */}
           {showLinks && links.length > 0 && (
-            <Card style={{ boxShadow: CARD_SHADOW }}>
-              <Title level={4} style={{ marginTop: 0, marginBottom: 16 }}>相关链接</Title>
+            <Card>
+              <Title level={4} style={{ marginTop: 0, marginBottom: 16, color: token.colorText }}>相关链接</Title>
               <Space orientation="vertical" size="middle" style={{ width: '100%', display: 'flex' }}>
                 {links.map((link) => (
                   <Link
@@ -97,7 +92,7 @@ export function AboutDrawer() {
                       hoverable
                       style={{
                         borderRadius: 8,
-                        border: '1px solid #f0f0f0',
+                        borderColor: token.colorBorder,
                       }}
                       styles={{ body: { padding: '16px' } }}
                     >
@@ -105,7 +100,7 @@ export function AboutDrawer() {
                         <div style={{ flexShrink: 0 }}>
                           {link.favicon ? (
                             failedFavicons.has(link.favicon) ? (
-                              <span style={{ color: '#1890ff', fontSize: 24 }}>🌐</span>
+                              <span style={{ color: token.colorPrimary, fontSize: 24 }}>🌐</span>
                             ) : (
                               <img 
                                 src={link.favicon} 
@@ -119,21 +114,21 @@ export function AboutDrawer() {
                               />
                             )
                           ) : link.icon === 'github' ? (
-                            <GithubOutlined style={{ fontSize: 24, color: TEXT_COLOR_PRIMARY }} />
+                            <GithubOutlined style={{ fontSize: 24, color: token.colorText }} />
                           ) : null}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ 
                             fontSize: 16, 
                             fontWeight: 500, 
-                            color: TEXT_COLOR_PRIMARY,
+                            color: token.colorText,
                             marginBottom: 4
                           }}>
                             {link.title}
                           </div>
                           <div style={{ 
                             fontSize: 14, 
-                            color: TEXT_COLOR_TERTIARY,
+                            color: token.colorTextTertiary,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'

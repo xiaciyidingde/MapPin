@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
-import { Layout, Drawer, Button, FloatButton, Spin, message, Tabs } from 'antd';
+import { Layout, Drawer, Button, FloatButton, Spin, Tabs, ConfigProvider, App as AntApp, theme } from 'antd';
 import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { UploadZone } from './components/FileUpload/UploadZone';
 import { FileList } from './components/FileUpload/FileList';
@@ -15,6 +15,7 @@ import { useDrawerManager } from './hooks/useDrawerManager';
 import { useLocationTracking } from './hooks/useLocationTracking';
 import { useTitleAnimation } from './hooks/useTitleAnimation';
 import { useDataLoader } from './hooks/useDataLoader';
+import { lightTheme, darkTheme } from './themes';
 import './App.css';
 
 // 懒加载非首屏组件
@@ -52,6 +53,7 @@ function App() {
   const autoLocate = useSettingsStore((state) => state.autoLocate);
   const baseMapMode = useMapStore((state) => state.baseMapMode);
   const setBaseMapMode = useMapStore((state) => state.setBaseMapMode);
+  const themeMode = useMapStore((state) => state.theme);
   
   // 位置追踪
   const { handleLocate } = useLocationTracking(autoLocate);
@@ -59,7 +61,6 @@ function App() {
   // 打开添加点位 Modal
   const handleAddPoint = () => {
     if (!currentFileId) {
-      message.warning('请先打开文件');
       return;
     }
     openAddPoint();
@@ -67,24 +68,94 @@ function App() {
 
   return (
     <ErrorBoundary>
+      <ConfigProvider theme={themeMode === 'dark' ? darkTheme : lightTheme}>
+        <AntApp>
+          <AppContent 
+            themeMode={themeMode}
+            measureActive={measureActive}
+            setMeasureActive={setMeasureActive}
+            isDrawerOpen={isDrawerOpen}
+            closeDrawer={closeDrawer}
+            openFileManagement={openFileManagement}
+            openSettings={openSettings}
+            openTools={openTools}
+            openFileSettings={openFileSettings}
+            openAbout={openAbout}
+            openAddPoint={openAddPoint}
+            getDrawerTab={getDrawerTab}
+            getDrawerData={getDrawerData}
+            fileManagementTab={fileManagementTab}
+            setFileManagementTab={setFileManagementTab}
+            showTitle={showTitle}
+            startAnimation={startAnimation}
+            currentFileId={currentFileId}
+            autoLocate={autoLocate}
+            baseMapMode={baseMapMode}
+            setBaseMapMode={setBaseMapMode}
+            handleLocate={handleLocate}
+            handleAddPoint={handleAddPoint}
+          />
+        </AntApp>
+      </ConfigProvider>
+    </ErrorBoundary>
+  );
+}
+
+function AppContent({ 
+  themeMode, 
+  measureActive, 
+  setMeasureActive,
+  isDrawerOpen,
+  closeDrawer,
+  openFileManagement,
+  openSettings,
+  openTools,
+  openFileSettings,
+  openAbout,
+  getDrawerTab,
+  getDrawerData,
+  fileManagementTab,
+  setFileManagementTab,
+  showTitle,
+  startAnimation,
+  currentFileId: _currentFileId,
+  baseMapMode,
+  setBaseMapMode,
+  handleLocate,
+  handleAddPoint,
+}: any) {
+  const { token } = theme.useToken();
+  const { message } = AntApp.useApp();
+
+  // 添加点位时的提示
+  const handleAddPointClick = () => {
+    if (!_currentFileId) {
+      message.warning('请先打开文件');
+      return;
+    }
+    handleAddPoint();
+  };
+
+  return (
+    <div data-theme={themeMode}>
       <NetworkStatus />
       <Layout className="min-h-screen">
-      {/* 移动端顶部导航栏 */}
-      <Header style={{ 
-        background: 'white',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1001,
-        height: '64px',
-        lineHeight: '64px'
-      }}>
+        {/* 移动端顶部导航栏 */}
+        <Header style={{ 
+          background: token.colorBgContainer,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1001,
+          height: '64px',
+          lineHeight: '64px'
+        }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative' }}>
           {/* 应用图标 */}
           <img 
@@ -117,7 +188,7 @@ function App() {
               <h1 
                 className="text-xl font-bold m-0" 
                 style={{ 
-                  color: '#262626',
+                  color: token.colorText,
                   whiteSpace: 'nowrap',
                   transform: startAnimation ? 'translateX(-120px)' : 'translateX(0)',
                   transition: 'transform 1s linear',
@@ -143,7 +214,7 @@ function App() {
         {/* 右侧按钮 */}
         <Button
           type="text"
-          icon={<SettingOutlined style={{ fontSize: '24px', color: '#595959' }} />}
+          icon={<SettingOutlined style={{ fontSize: '24px', color: token.colorText }} />}
           onClick={() => openSettings('global')}
           className="hover:bg-gray-100"
         />
@@ -162,7 +233,7 @@ function App() {
         />
         <FloatButton
           icon={<PlusOutlined />}
-          onClick={handleAddPoint}
+          onClick={handleAddPointClick}
         />
         <FloatButton
           icon={baseMapMode === 'map' ? <AppstoreOutlined /> : <GlobalOutlined />}
@@ -203,6 +274,7 @@ function App() {
         }}
         onClose={closeDrawer}
         open={isDrawerOpen('fileManagement')}
+        destroyOnClose={true}
       >
         <Tabs
           activeKey={fileManagementTab}
@@ -237,7 +309,6 @@ function App() {
             paddingLeft: 16, 
             paddingRight: 16, 
             margin: 0,
-            background: '#fff',
             flexShrink: 0
           }}
           styles={{
@@ -260,6 +331,7 @@ function App() {
             maxHeight: 'calc(100dvh - 64px)'
           }
         }}
+        destroyOnClose={true}
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
           <SettingsDrawer
@@ -329,7 +401,7 @@ function App() {
         onClose={closeDrawer}
       />
     </Layout>
-    </ErrorBoundary>
+    </div>
   );
 }
 

@@ -1,0 +1,104 @@
+.theme-toggle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-toggle-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  color: #faad14;
+}
+
+[data-theme="dark"] .theme-toggle-icon {
+  color: #91caff;
+}
+
+/* 太阳图标 */
+.sun-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+  transform-origin: center;
+}
+
+.sun-icon.active {
+  transform: rotate(0deg);
+  opacity: 1;
+}
+
+.sun-icon:not(.active) {
+  transform: rotate(180deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 月亮图标 */
+.moon-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+  transform-origin: center;
+}
+
+.moon-icon.active {
+  transform: rotate(0deg);
+  opacity: 1;
+}
+
+.moon-icon:not(.active) {
+  transform: rotate(-180deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 点击时的涟漪效果 */
+.theme-toggle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease, opacity 0.6s ease;
+}
+
+.theme-toggle:active::after {
+  width: 48px;
+  height: 48px;
+  opacity: 0.2;
+}
