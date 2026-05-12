@@ -11,7 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
 import { AddPointModal } from './components/AddPoint/AddPointModal';
 import { useMapStore, useSettingsStore } from './store';
-import { useDrawerManager } from './hooks/useDrawerManager';
+import { useDrawerManager, type DrawerType } from './hooks/useDrawerManager';
 import { useLocationTracking } from './hooks/useLocationTracking';
 import { useTitleAnimation } from './hooks/useTitleAnimation';
 import { useDataLoader } from './hooks/useDataLoader';
@@ -123,7 +123,31 @@ function AppContent({
   setBaseMapMode,
   handleLocate,
   handleAddPoint,
-}: any) {
+}: {
+  themeMode: string;
+  measureActive: boolean;
+  setMeasureActive: (active: boolean) => void;
+  isDrawerOpen: (type: DrawerType) => boolean;
+  closeDrawer: () => void;
+  openFileManagement: () => void;
+  openSettings: (tab: string) => void;
+  openTools: (tab: string) => void;
+  openFileSettings: (fileId: string) => void;
+  openAbout: () => void;
+  openAddPoint: () => void;
+  getDrawerTab: () => string | undefined;
+  getDrawerData: () => { fileId?: string } | undefined;
+  fileManagementTab: string;
+  setFileManagementTab: (tab: string) => void;
+  showTitle: boolean;
+  startAnimation: boolean;
+  currentFileId: string | null;
+  autoLocate: boolean;
+  baseMapMode: 'map' | 'grid';
+  setBaseMapMode: (mode: 'map' | 'grid') => void;
+  handleLocate: () => void;
+  handleAddPoint: () => void;
+}) {
   const { token } = theme.useToken();
   const { message } = AntApp.useApp();
 
@@ -212,12 +236,31 @@ function AppContent({
         } />
         
         {/* 右侧按钮 */}
-        <Button
-          type="text"
-          icon={<SettingOutlined style={{ fontSize: '24px', color: token.colorText }} />}
-          onClick={() => openSettings('global')}
-          className="hover:bg-gray-100"
-        />
+        <div 
+          className="settings-button-wrapper"
+          onClick={() => {
+            const wrapper = document.querySelector('.settings-button-wrapper');
+            const isOpen = isDrawerOpen('settings');
+            
+            if (wrapper) {
+              if (isOpen) {
+                wrapper.classList.add('rotating-reverse');
+                setTimeout(() => wrapper.classList.remove('rotating-reverse'), 500);
+                closeDrawer();
+              } else {
+                wrapper.classList.add('rotating');
+                setTimeout(() => wrapper.classList.remove('rotating'), 500);
+                openSettings('global');
+              }
+            }
+          }}
+        >
+          <Button
+            type="text"
+            icon={<SettingOutlined style={{ fontSize: '24px', color: token.colorText }} />}
+            className="hover:bg-gray-100"
+          />
+        </div>
       </Header>
 
       {/* 地图主体 - 全屏显示 */}

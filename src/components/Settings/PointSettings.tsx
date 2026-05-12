@@ -41,22 +41,34 @@ export function PointSettings() {
     {
       key: 'all',
       label: '全部点位',
-      onClick: () => setFilterType('all'),
+      onClick: ({ domEvent }) => {
+        domEvent.stopPropagation();
+        setFilterType('all');
+      },
     },
     {
       key: 'survey',
       label: '碎部点',
-      onClick: () => setFilterType('survey'),
+      onClick: ({ domEvent }) => {
+        domEvent.stopPropagation();
+        setFilterType('survey');
+      },
     },
     {
       key: 'control',
       label: '控制点',
-      onClick: () => setFilterType('control'),
+      onClick: ({ domEvent }) => {
+        domEvent.stopPropagation();
+        setFilterType('control');
+      },
     },
     {
       key: 'manual',
       label: '手动点',
-      onClick: () => setFilterType('manual'),
+      onClick: ({ domEvent }) => {
+        domEvent.stopPropagation();
+        setFilterType('manual');
+      },
     },
   ], []);
 
@@ -64,11 +76,11 @@ export function PointSettings() {
   const filterLabel = useMemo(() => {
     switch (filterType) {
       case 'survey':
-        return '碎部点';
+        return '碎部';
       case 'control':
-        return '控制点';
+        return '控制';
       case 'manual':
-        return '手动点';
+        return '手动';
       default:
         return '全部';
     }
@@ -240,7 +252,7 @@ export function PointSettings() {
       {/* 顶部操作区 */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 600 }}>
-          <Dropdown menu={{ items: filterMenuItems }} placement="bottomLeft">
+          <Dropdown menu={{ items: filterMenuItems }} placement="bottomLeft" trigger={['click']}>
             <Button icon={<FilterOutlined />} style={{ flexShrink: 0 }}>
               {filterLabel}
             </Button>

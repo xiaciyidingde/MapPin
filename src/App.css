@@ -1,5 +1,10 @@
 /* App specific styles */
 
+/* 禁用移动端触摸高亮 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* 移动端优化 */
 body {
   -webkit-font-smoothing: antialiased;
@@ -310,5 +315,126 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
 @supports not (view-transition-name: none) {
   [data-theme] {
     transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+/* 悬浮按钮点击动画 */
+.ant-float-btn {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-float-btn:active {
+  animation: float-btn-click 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes float-btn-click {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 设置按钮旋转动画 */
+.settings-button-wrapper {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.settings-button-wrapper.rotating {
+  animation: settings-rotate 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-button-wrapper.rotating-reverse {
+  animation: settings-rotate-reverse 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes settings-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes settings-rotate-reverse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-180deg);
+  }
+}
+
+/* 文件上传区点击动画 */
+.upload-zone-wrapper .ant-upload {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upload-zone-wrapper .ant-upload:active {
+  transform: scale(0.98);
+}
+
+/* 所有按钮点击缩放动画 */
+.ant-btn,
+.ant-modal-footer .ant-btn,
+.ant-drawer-footer .ant-btn {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-btn:active,
+.ant-modal-footer .ant-btn:active,
+.ant-drawer-footer .ant-btn:active {
+  transform: scale(0.95);
+}
+
+/* Radio 单选框点击缩放动画 */
+.ant-radio-wrapper {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-radio-wrapper:active {
+  transform: scale(0.95);
+}
+
+/* Checkbox 复选框点击缩放动画 */
+.ant-checkbox-wrapper {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ant-checkbox-wrapper:active {
+  transform: scale(0.95);
+}
+
+/* 搜索结果悬浮窗动画 */
+.search-results-popup {
+  animation: search-popup-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes search-popup-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes upload-zone-click {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
   }
 }

@@ -502,6 +502,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
           {/* 匹配框 */}
           <div
             ref={resultsRef}
+            className="search-results-popup"
             style={{
               position: 'fixed',
               top: 72,
