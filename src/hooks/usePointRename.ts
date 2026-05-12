@@ -12,6 +12,7 @@ export function usePointRename(currentFileId: string | null) {
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [renamingPoint, setRenamingPoint] = useState<MeasurementPoint | null>(null);
   const [newPointNumber, setNewPointNumber] = useState('');
+  const [newCode, setNewCode] = useState('');
 
   const points = useDataStore((state) => state.points);
   const updatePoint = useDataStore((state) => state.updatePoint);
@@ -20,6 +21,7 @@ export function usePointRename(currentFileId: string | null) {
   const openRenameModal = useCallback((point: MeasurementPoint) => {
     setRenamingPoint(point);
     setNewPointNumber(point.pointNumber);
+    setNewCode(point.code || '');
     setRenameModalOpen(true);
   }, []);
 
@@ -28,6 +30,7 @@ export function usePointRename(currentFileId: string | null) {
     setRenameModalOpen(false);
     setRenamingPoint(null);
     setNewPointNumber('');
+    setNewCode('');
   }, []);
 
   // 确认重命名
@@ -35,6 +38,8 @@ export function usePointRename(currentFileId: string | null) {
     if (!currentFileId || !renamingPoint) return;
 
     const trimmedName = newPointNumber.trim();
+    const trimmedCode = newCode.trim();
+    
     if (!trimmedName) {
       message.error('点号不能为空');
       return;
@@ -46,37 +51,60 @@ export function usePointRename(currentFileId: string | null) {
       return;
     }
 
-    // 如果点号没有变化，直接关闭
-    if (trimmedName === renamingPoint.pointNumber) {
+    // 如果点号和编码都没有变化，直接关闭
+    if (trimmedName === renamingPoint.pointNumber && trimmedCode === (renamingPoint.code || '')) {
       closeRenameModal();
       return;
     }
 
-    // 检查点号是否重复
-    const currentPoints = points.get(currentFileId) || [];
-    const existingPoint = currentPoints.find(
-      (p) => p.pointNumber === trimmedName && p.id !== renamingPoint.id
-    );
+    // 检查点号是否重复（仅当点号改变时）
+    if (trimmedName !== renamingPoint.pointNumber) {
+      const currentPoints = points.get(currentFileId) || [];
+      const existingPoint = currentPoints.find(
+        (p) => p.pointNumber === trimmedName && p.id !== renamingPoint.id
+      );
 
-    if (existingPoint) {
-      message.error(`点号 ${trimmedName} 已存在`);
-      return;
+      if (existingPoint) {
+        message.error(`点号 ${trimmedName} 已存在`);
+        return;
+      }
     }
 
     try {
-      await updatePoint(currentFileId, renamingPoint.id, { pointNumber: trimmedName });
-      message.success(`已将点号 ${renamingPoint.pointNumber} 重命名为 ${trimmedName}`);
+      const updates: Partial<MeasurementPoint> = {};
+      
+      if (trimmedName !== renamingPoint.pointNumber) {
+        updates.pointNumber = trimmedName;
+      }
+      
+      if (trimmedCode !== (renamingPoint.code || '')) {
+        updates.code = trimmedCode || undefined;
+      }
+      
+      await updatePoint(currentFileId, renamingPoint.id, updates);
+      
+      const messages: string[] = [];
+      if (updates.pointNumber) {
+        messages.push(`点号: ${renamingPoint.pointNumber} → ${trimmedName}`);
+      }
+      if ('code' in updates) {
+        messages.push(`编码: ${renamingPoint.code || '无'} → ${trimmedCode || '无'}`);
+      }
+      
+      message.success(`已更新 ${messages.join(', ')}`);
       closeRenameModal();
     } catch {
       message.error('重命名失败');
     }
-  }, [currentFileId, renamingPoint, newPointNumber, points, updatePoint, closeRenameModal]);
+  }, [currentFileId, renamingPoint, newPointNumber, newCode, points, updatePoint, closeRenameModal]);
 
   return {
     renameModalOpen,
     renamingPoint,
     newPointNumber,
+    newCode,
     setNewPointNumber,
+    setNewCode,
     openRenameModal,
     closeRenameModal,
     confirmRename,

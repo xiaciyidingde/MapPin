@@ -5,7 +5,7 @@
 **测绘数据可视化工具，让测量点管理变得简单高效**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/版本-1.1.4.0-blue.svg" alt="版本">
+  <img src="https://img.shields.io/badge/版本-1.1.5.0-blue.svg" alt="版本">
   <img src="https://img.shields.io/badge/平台-Web%20%7C%20PWA-green.svg" alt="平台">
   <img src="https://img.shields.io/badge/React-19-61dafb.svg" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-6-3178c6.svg" alt="TypeScript">

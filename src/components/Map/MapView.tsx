@@ -51,7 +51,9 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
     renameModalOpen,
     renamingPoint,
     newPointNumber,
+    newCode,
     setNewPointNumber,
+    setNewCode,
     openRenameModal,
     closeRenameModal,
     confirmRename,
@@ -254,7 +256,9 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
         open={renameModalOpen}
         point={renamingPoint}
         newPointNumber={newPointNumber}
+        newCode={newCode}
         onPointNumberChange={setNewPointNumber}
+        onCodeChange={setNewCode}
         onConfirm={confirmRename}
         onCancel={closeRenameModal}
       />
