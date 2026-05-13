@@ -438,3 +438,8 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
     transform: scale(1);
   }
 }
+
+/* 搜索栏模式切换按钮 - 深色主题优化 */
+[data-theme="dark"] .search-mode-toggle .anticon-down {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
