@@ -41,6 +41,7 @@ export interface AppConfig {
     minZoom: number;
     maxZoom: number;
     defaultTileSource: string;
+    disabledTileSources?: string[];
     cluster: {
       radius: number;
       maxZoom: number;

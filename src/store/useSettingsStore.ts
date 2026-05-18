@@ -69,7 +69,7 @@ export const useSettingsStore = create<SettingsStore>()(
       language: 'zh-CN',
       showUserLocation: true,
       autoLocate: true,
-      showPointLabels: false,
+      showPointLabels: true,
       hrmsThreshold: appConfig.detection.hrmsThreshold,
       vrmsThreshold: appConfig.detection.vrmsThreshold,
       duplicateCoordinateTolerance: appConfig.detection.duplicateCoordinateTolerance,

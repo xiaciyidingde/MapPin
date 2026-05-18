@@ -1,6 +1,6 @@
 import { Form, InputNumber, Space, Select, Input, Alert, Button, message, theme } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSettingsStore } from '../../store';
 import { MAP_TILE_SOURCES, getMapTileSourceList } from '../../config/mapTileSources';
 import { appConfig } from '../../config/appConfig';
@@ -38,6 +38,16 @@ export function GlobalSettings() {
   const mapSources = getMapTileSourceList();
   const currentSource = MAP_TILE_SOURCES[mapTileSource];
   const requiresToken = currentSource?.requiresToken;
+
+  // 检查当前选中的底图是否被禁用，如果是则自动切换到第一个可用的
+  useEffect(() => {
+    const disabledSources = appConfig.map.disabledTileSources || [];
+    if (disabledSources.includes(mapTileSource) && mapSources.length > 0) {
+      const firstAvailable = mapSources[0].id as 'osm' | 'tianditu-vec' | 'tianditu-img' | 'tianditu-ter';
+      setMapTileSource(firstAvailable);
+      message.info(`当前底图已被禁用，已自动切换到 ${mapSources[0].name}`);
+    }
+  }, [mapTileSource, mapSources, setMapTileSource]);
 
   // 处理 API Key 输入
   const handleApiKeyChange = (key: 'tianditu' | 'amap', value: string) => {
