@@ -1,47 +1,85 @@
 import L from 'leaflet';
 
-// 创建蓝色圆点图标（测量点）
-export const surveyPointIcon = L.divIcon({
-  className: 'custom-marker-icon',
-  html: `
-    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="8" fill="#1677ff" stroke="white" stroke-width="2"/>
-    </svg>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -12],
-});
+// 创建带标签的蓝色圆点图标（测量点）
+export function createSurveyPointIcon(pointNumber?: string, code?: string, showLabel: boolean = false) {
+  return L.divIcon({
+    className: 'custom-marker-icon',
+    html: `
+      <div class="marker-with-label">
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="8" fill="#1677ff" stroke="white" stroke-width="2"/>
+        </svg>
+        ${showLabel && pointNumber ? `
+          <div class="marker-label">
+            <div class="marker-label-number">${pointNumber}</div>
+            ${code ? `<div class="marker-label-code">${code}</div>` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+  });
+}
 
-// 创建红色三角形图标（控制点）
-export const controlPointIcon = L.divIcon({
-  className: 'custom-marker-icon',
-  html: `
-    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 4 L20 20 L4 20 Z" fill="#cf1322" stroke="white" stroke-width="2"/>
-    </svg>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 20],
-  popupAnchor: [0, -20],
-});
+// 创建带标签的红色三角形图标（控制点）
+export function createControlPointIcon(pointNumber?: string, code?: string, showLabel: boolean = false) {
+  return L.divIcon({
+    className: 'custom-marker-icon',
+    html: `
+      <div class="marker-with-label">
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 4 L20 20 L4 20 Z" fill="#cf1322" stroke="white" stroke-width="2"/>
+        </svg>
+        ${showLabel && pointNumber ? `
+          <div class="marker-label">
+            <div class="marker-label-number">${pointNumber}</div>
+            ${code ? `<div class="marker-label-code">${code}</div>` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 20],
+    popupAnchor: [0, -20],
+  });
+}
 
-// 创建红色圆点图标（测量模式选中的点）
-export const selectedPointIcon = L.divIcon({
-  className: 'custom-marker-icon',
-  html: `
-    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="8" fill="#ff4d4f" stroke="white" stroke-width="2"/>
-    </svg>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -12],
-});
+// 创建带标签的红色圆点图标（测量模式选中的点）
+export function createSelectedPointIcon(pointNumber?: string, code?: string, showLabel: boolean = false) {
+  return L.divIcon({
+    className: 'custom-marker-icon',
+    html: `
+      <div class="marker-with-label">
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="8" fill="#ff4d4f" stroke="white" stroke-width="2"/>
+        </svg>
+        ${showLabel && pointNumber ? `
+          <div class="marker-label">
+            <div class="marker-label-number">${pointNumber}</div>
+            ${code ? `<div class="marker-label-code">${code}</div>` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+  });
+}
+
+// 兼容旧代码的静态图标（不带标签）
+export const surveyPointIcon = createSurveyPointIcon();
+export const controlPointIcon = createControlPointIcon();
+export const selectedPointIcon = createSelectedPointIcon();
 
 // 根据点类型获取图标
-export function getMarkerIcon(type: 'control' | 'survey') {
-  return type === 'control' ? controlPointIcon : surveyPointIcon;
+export function getMarkerIcon(type: 'control' | 'survey', pointNumber?: string, code?: string, showLabel: boolean = false) {
+  if (type === 'control') {
+    return createControlPointIcon(pointNumber, code, showLabel);
+  }
+  return createSurveyPointIcon(pointNumber, code, showLabel);
 }
 
 // 创建用户位置图标（导航软件风格的定位图标）

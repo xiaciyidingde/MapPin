@@ -424,7 +424,14 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
                   alignItems: 'center',
                   gap: 2
                 }}
+                className="search-mode-toggle"
                 disabled={disabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
               >
                 {searchMode === 'point' ? (
                   <EnvironmentOutlined style={{ color: '#1890ff', fontSize: 16 }} />
@@ -451,7 +458,11 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
         }
         value={searchText}
         onChange={(e) => setSearchText(e.target.value)}
-        onFocus={() => {
+        onFocus={(e) => {
+          // 如果焦点来自模式切换按钮，不打开结果
+          if (e.relatedTarget?.closest('.search-mode-toggle')) {
+            return;
+          }
           if (!disabled) {
             setShowResults(true);
             // 如果还没有加载数据，立即加载

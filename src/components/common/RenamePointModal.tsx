@@ -5,7 +5,9 @@ interface RenamePointModalProps {
   open: boolean;
   point: MeasurementPoint | null;
   newPointNumber: string;
+  newCode: string;
   onPointNumberChange: (value: string) => void;
+  onCodeChange: (value: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -18,7 +20,9 @@ export function RenamePointModal({
   open,
   point,
   newPointNumber,
+  newCode,
   onPointNumberChange,
+  onCodeChange,
   onConfirm,
   onCancel,
 }: RenamePointModalProps) {
@@ -33,16 +37,30 @@ export function RenamePointModal({
       centered
     >
       <div style={{ marginBottom: 16 }}>
-        当前点号: {point?.pointNumber}
+        <div style={{ marginBottom: 8 }}>
+          当前点号: {point?.pointNumber}
+        </div>
+        <Input
+          placeholder="请输入新点号"
+          value={newPointNumber}
+          onChange={(e) => onPointNumberChange(e.target.value)}
+          onPressEnter={onConfirm}
+          maxLength={50}
+          autoFocus
+        />
       </div>
-      <Input
-        placeholder="请输入新点号"
-        value={newPointNumber}
-        onChange={(e) => onPointNumberChange(e.target.value)}
-        onPressEnter={onConfirm}
-        maxLength={50}
-        autoFocus
-      />
+      <div>
+        <div style={{ marginBottom: 8 }}>
+          编码: {point?.code || '无'}
+        </div>
+        <Input
+          placeholder="请输入新编码（可选）"
+          value={newCode}
+          onChange={(e) => onCodeChange(e.target.value)}
+          onPressEnter={onConfirm}
+          maxLength={50}
+        />
+      </div>
     </Modal>
   );
 }

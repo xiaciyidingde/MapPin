@@ -39,6 +39,7 @@
     "minZoom": 3,
     "maxZoom": 18,
     "defaultTileSource": "osm",
+    "disabledTileSources": [],
     "cluster": {
       "radius": 60,
       "maxZoom": 16

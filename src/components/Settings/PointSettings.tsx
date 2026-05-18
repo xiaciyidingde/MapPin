@@ -28,7 +28,9 @@ export function PointSettings() {
     renameModalOpen,
     renamingPoint,
     newPointNumber,
+    newCode,
     setNewPointNumber,
+    setNewCode,
     openRenameModal,
     closeRenameModal,
     confirmRename,
@@ -244,7 +246,9 @@ export function PointSettings() {
         open={renameModalOpen}
         point={renamingPoint}
         newPointNumber={newPointNumber}
+        newCode={newCode}
         onPointNumberChange={setNewPointNumber}
+        onCodeChange={setNewCode}
         onConfirm={confirmRename}
         onCancel={closeRenameModal}
       />

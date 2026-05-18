@@ -438,3 +438,60 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
     transform: scale(1);
   }
 }
+
+/* 搜索栏模式切换按钮 - 深色主题优化 */
+[data-theme="dark"] .search-mode-toggle .anticon-down {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* 地图标记标签样式 */
+.marker-with-label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.marker-label {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #000;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  text-shadow: 
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    0 0 3px #fff;
+}
+
+.marker-label-number {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.marker-label-code {
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 0.75;
+  line-height: 1.2;
+}
+
+[data-theme="dark"] .marker-label {
+  color: #fff;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000,
+    0 0 3px #000;
+}

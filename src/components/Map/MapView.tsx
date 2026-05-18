@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { Tag, Button, message, Popconfirm } from 'antd';
 import { SwapOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import { useMapStore, useDataStore, useSettingsStore } from '../../store';
-import { getMarkerIcon, selectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
+import { getMarkerIcon, createSelectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
 import { FitViewControl } from './FitViewControl';
 import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
@@ -51,7 +51,9 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
     renameModalOpen,
     renamingPoint,
     newPointNumber,
+    newCode,
     setNewPointNumber,
+    setNewCode,
     openRenameModal,
     closeRenameModal,
     confirmRename,
@@ -254,7 +256,9 @@ function PointPopup({ point }: { point: MeasurementPoint }) {
         open={renameModalOpen}
         point={renamingPoint}
         newPointNumber={newPointNumber}
+        newCode={newCode}
         onPointNumberChange={setNewPointNumber}
+        onCodeChange={setNewCode}
         onConfirm={confirmRename}
         onCancel={closeRenameModal}
       />
@@ -481,8 +485,10 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const renderMarker = (point: MeasurementPoint) => {
     // 判断点是否被选中
     const isSelected = selectedPointIds.includes(point.id);
-    // 如果被选中，使用红色图标；否则使用原来的图标
-    const icon = isSelected ? selectedPointIcon : getMarkerIcon(point.type);
+    // 根据选中状态和标签显示设置创建图标
+    const icon = isSelected 
+      ? createSelectedPointIcon(point.pointNumber, point.code, showPointLabels)
+      : getMarkerIcon(point.type, point.pointNumber, point.code, showPointLabels);
     
     return (
       <Marker
@@ -505,11 +511,6 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
         }}
       >
         {!measureActive && <PointPopup point={point} />}
-        {showPointLabels && (
-          <Tooltip direction="top" offset={[0, -20]} opacity={0.9} permanent>
-            {point.pointNumber}
-          </Tooltip>
-        )}
       </Marker>
     );
   };

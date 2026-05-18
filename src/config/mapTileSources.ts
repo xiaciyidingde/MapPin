@@ -275,7 +275,12 @@ export function getAnnotationLayerUrl(sourceId: string, token?: string): string 
 
 /**
  * 获取地图源列表（用于设置界面）
+ * 会自动过滤掉配置中禁用的底图源
  */
 export function getMapTileSourceList(): MapTileSource[] {
-  return Object.values(MAP_TILE_SOURCES);
+  const allSources = Object.values(MAP_TILE_SOURCES);
+  const disabledSources = appConfig.map.disabledTileSources || [];
+  
+  // 过滤掉被禁用的底图源
+  return allSources.filter(source => !disabledSources.includes(source.id));
 }
