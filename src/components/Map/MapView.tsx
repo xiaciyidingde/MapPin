@@ -387,6 +387,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const baseMapMode = useMapStore((state) => state.baseMapMode);
   const searchMarker = useMapStore((state) => state.searchMarker);
   const setSearchMarker = useMapStore((state) => state.setSearchMarker);
+  const codeFilter = useMapStore((state) => state.codeFilter);
   const points = useDataStore((state) => state.points);
   const locationPermissionDenied = useMapStore((state) => state.locationPermissionDenied);
   
@@ -453,8 +454,22 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
     }
   }, [measureActive]);
 
-  const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
-  const validPoints = currentPoints.filter((p) => p.lat && p.lng);
+  const currentPoints = useMemo(() => {
+    return currentFileId ? points.get(currentFileId) || [] : [];
+  }, [currentFileId, points]);
+  
+  // 应用编码过滤
+  const codeFilteredPoints = useMemo(() => {
+    if (codeFilter.length === 0) return currentPoints;
+    return currentPoints.filter((point) => {
+      if (point.code && point.code.trim()) {
+        return codeFilter.includes(point.code.trim());
+      }
+      return codeFilter.includes('__no_code__');
+    });
+  }, [currentPoints, codeFilter]);
+
+  const validPoints = codeFilteredPoints.filter((p) => p.lat && p.lng);
   
   // 当点位数量大于 500 时，自动禁用点位号悬浮窗以提升性能
   const TOOLTIP_THRESHOLD = 500;

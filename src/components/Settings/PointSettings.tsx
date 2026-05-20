@@ -99,10 +99,12 @@ export function PointSettings() {
       return true;
     });
     
-    // 再按搜索文本过滤
-    const searchFiltered = typeFiltered.filter((point) =>
-      point.pointNumber.toLowerCase().includes(searchText.toLowerCase())
-    );
+    // 再按搜索文本过滤（支持点号和编码搜索）
+    const searchFiltered = typeFiltered.filter((point) => {
+      const query = searchText.toLowerCase();
+      return point.pointNumber.toLowerCase().includes(query) ||
+        (point.code && point.code.toLowerCase().includes(query));
+    });
 
     // 排序：控制点在前，测量点在后，每组内按 order 字段保持原始顺序
     return [...searchFiltered].sort((a, b) => {
@@ -262,7 +264,7 @@ export function PointSettings() {
             </Button>
           </Dropdown>
           <Input
-            placeholder="搜索点号"
+            placeholder="搜索点号/编码"
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}

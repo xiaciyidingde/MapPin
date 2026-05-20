@@ -53,6 +53,10 @@ interface MapStore {
   // 主题切换动画类型
   themeAnimation: 'simple' | 'triple';
   setThemeAnimation: (animation: 'simple' | 'triple') => void;
+
+  // 编码过滤（控制地图上渲染的点位）
+  codeFilter: string[];
+  setCodeFilter: (codes: string[]) => void;
 }
 
 export const useMapStore = create<MapStore>()(
@@ -74,6 +78,7 @@ export const useMapStore = create<MapStore>()(
       baseMapMode: 'map', // 默认使用地图模式
       theme: 'light', // 默认浅色主题
       themeAnimation: 'simple', // 默认简单动画
+      codeFilter: [], // 默认不启用编码过滤
 
       // Actions
       setCurrentFileId: (id) => set({ currentFileId: id }),
@@ -94,6 +99,7 @@ export const useMapStore = create<MapStore>()(
       setBaseMapMode: (mode) => set({ baseMapMode: mode }),
       setTheme: (theme) => set({ theme }),
       setThemeAnimation: (animation) => set({ themeAnimation: animation }),
+      setCodeFilter: (codes) => set({ codeFilter: codes }),
     }),
     {
       name: 'mappin-map-storage',

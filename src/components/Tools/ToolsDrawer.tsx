@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tabs, theme } from 'antd';
 import { PointSettings } from '../Settings/PointSettings';
+import { CodeFilter } from '../Settings/CodeFilter';
 import { AnomalyDetection } from './AnomalyDetection';
 
 interface ToolsDrawerProps {
@@ -18,6 +19,11 @@ export function ToolsDrawer({ onClose, defaultTab = 'points' }: ToolsDrawerProps
       key: 'points',
       label: '点位设置',
       children: <PointSettings />,
+    },
+    {
+      key: 'codeFilter',
+      label: '编码过滤',
+      children: <CodeFilter />,
     },
     {
       key: 'anomaly',
