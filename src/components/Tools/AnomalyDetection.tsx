@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse } from 'antd';
-import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, message, Popconfirm } from 'antd';
+import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisibleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { anomalyDetectionService } from '../../services/anomalyDetectionService';
@@ -14,6 +14,7 @@ interface AnomalyDetectionProps {
 export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: AnomalyDetectionProps) {
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
+  const deletePoint = useDataStore((state) => state.deletePoint);
   const setView = useMapStore((state) => state.setView);
   const setSelectedPointId = useMapStore((state) => state.setSelectedPointId);
   const hrmsThreshold = useSettingsStore((state) => state.hrmsThreshold);
@@ -74,6 +75,18 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   // 忽略异常
   const handleIgnore = (anomaly: Anomaly) => {
     setIgnoredAnomalies((prev) => new Set(prev).add(`${anomaly.pointId}-${anomaly.type}`));
+  };
+
+  // 删除点位
+  const handleDelete = async (anomaly: Anomaly) => {
+    if (!currentFileId) return;
+    
+    try {
+      await deletePoint(currentFileId, anomaly.pointId);
+      message.success(`已删除点 ${anomaly.pointNumber}`);
+    } catch {
+      message.error('删除失败');
+    }
   };
 
   // 获取严重程度颜色
@@ -145,13 +158,34 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
               坐标: X={anomaly.details.coordinates.x.toFixed(3)}, Y={anomaly.details.coordinates.y.toFixed(3)}
             </div>
           )}
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-            <Button size="small" icon={<EnvironmentOutlined />} onClick={() => handleLocate(anomaly)}>
-              定位
-            </Button>
-            <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => handleIgnore(anomaly)}>
-              忽略
-            </Button>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button size="small" icon={<EnvironmentOutlined />} onClick={() => handleLocate(anomaly)} title="定位" />
+              <Popconfirm
+                title="确认忽略"
+                description={`确定要忽略点 ${anomaly.pointNumber} 的此异常吗？`}
+                onConfirm={() => handleIgnore(anomaly)}
+                okText="确认"
+                cancelText="取消"
+              >
+                <Button size="small" icon={<EyeInvisibleOutlined />} title="忽略" />
+              </Popconfirm>
+            </div>
+            <Popconfirm
+              title="确认删除"
+              description={`确定要删除点 ${anomaly.pointNumber} 吗？`}
+              onConfirm={() => handleDelete(anomaly)}
+              okText="删除"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                title="删除"
+              />
+            </Popconfirm>
           </div>
         </div>
       </div>

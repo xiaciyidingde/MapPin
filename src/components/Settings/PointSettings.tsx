@@ -11,7 +11,11 @@ import type { MeasurementPoint } from '../../types';
 
 type FilterType = 'all' | 'survey' | 'control' | 'manual';
 
-export function PointSettings() {
+interface PointSettingsProps {
+  onClose?: () => void;
+}
+
+export function PointSettings({ onClose }: PointSettingsProps) {
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
   const files = useDataStore((state) => state.files);
@@ -19,6 +23,8 @@ export function PointSettings() {
   const batchUpdatePoints = useDataStore((state) => state.batchUpdatePoints);
   const updateFile = useDataStore((state) => state.updateFile);
   const deletePoint = useDataStore((state) => state.deletePoint);
+  const setView = useMapStore((state) => state.setView);
+  const setSelectedPointId = useMapStore((state) => state.setSelectedPointId);
   const [searchText, setSearchText] = useState('');
   const [selectedPointIds, setSelectedPointIds] = useState<string[]>([]);
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -233,6 +239,16 @@ export function PointSettings() {
     }
   }, [selectedPointIds.length, sortedPoints]);
 
+  // 定位到点位
+  const handleLocate = useCallback((point: MeasurementPoint) => {
+    if (point.lat && point.lng) {
+      setView({ lat: point.lat, lng: point.lng }, 19);
+      setSelectedPointId(point.id);
+      // 关闭工具界面
+      onClose?.();
+    }
+  }, [setView, setSelectedPointId, onClose]);
+
   if (!currentFileId) {
     return (
       <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>
@@ -312,6 +328,7 @@ export function PointSettings() {
                     onToggleType={handleToggleType}
                     onOpenRename={openRenameModal}
                     onDelete={handleDeletePoint}
+                    onLocate={handleLocate}
                   />
                 </div>
               )}
