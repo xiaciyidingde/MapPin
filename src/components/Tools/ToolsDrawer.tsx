@@ -18,7 +18,7 @@ export function ToolsDrawer({ onClose, defaultTab = 'points' }: ToolsDrawerProps
     {
       key: 'points',
       label: '点位设置',
-      children: <PointSettings />,
+      children: <PointSettings onClose={onClose} />,
     },
     {
       key: 'codeFilter',

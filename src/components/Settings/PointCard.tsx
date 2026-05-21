@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Card, Button, Tag, Checkbox, Popconfirm } from 'antd';
-import { SwapOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { SwapOutlined, EditOutlined, DeleteOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import type { MeasurementPoint } from '../../types';
 
 interface PointCardProps {
@@ -10,6 +10,7 @@ interface PointCardProps {
   onToggleType: (point: MeasurementPoint) => void;
   onOpenRename: (point: MeasurementPoint) => void;
   onDelete: (point: MeasurementPoint) => void;
+  onLocate?: (point: MeasurementPoint) => void;
 }
 
 export const PointCard = memo(function PointCard({
@@ -19,6 +20,7 @@ export const PointCard = memo(function PointCard({
   onToggleType,
   onOpenRename,
   onDelete,
+  onLocate,
 }: PointCardProps) {
   // 使用 useCallback 缓存事件处理函数
   const handleToggleSelect = useCallback(() => {
@@ -36,6 +38,10 @@ export const PointCard = memo(function PointCard({
   const handleDelete = useCallback(() => {
     onDelete(point);
   }, [onDelete, point]);
+
+  const handleLocate = useCallback(() => {
+    onLocate?.(point);
+  }, [onLocate, point]);
 
   // 格式化坐标字符串
   const coordX = `X: ${point.x.toFixed(3)}`;
@@ -152,6 +158,14 @@ export const PointCard = memo(function PointCard({
           {/* 操作按钮 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 8 }}>
+              {onLocate && (
+                <Button
+                  size="small"
+                  icon={<EnvironmentOutlined />}
+                  onClick={handleLocate}
+                  title="定位"
+                />
+              )}
               <Button
                 size="small"
                 icon={<SwapOutlined />}
