@@ -1,9 +1,10 @@
 import { Button, Card, Flex, message, Modal, Checkbox, theme } from 'antd';
-import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined } from '@ant-design/icons';
+import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined, SwapOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { ExportConfigModal, type ExportConfig } from '../FileUpload/ExportConfigModal';
 import { RecycleBinDrawer } from './RecycleBinDrawer';
 import { FileMergeModal } from '../FileMerge/FileMergeModal';
+import { CoordinateSwapModal } from './CoordinateSwapModal';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
 import { exportFile, exportMultipleFiles } from '../../services/exportService';
@@ -21,6 +22,7 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [recycleBinOpen, setRecycleBinOpen] = useState(false);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [exportMode, setExportMode] = useState<'current' | 'all'>('current');
   const [exporting, setExporting] = useState(false);
   const [clearDataModalOpen, setClearDataModalOpen] = useState(false);
@@ -29,6 +31,15 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
     recycleBin: true,
     settings: false,
   });
+
+  // 打开坐标反转
+  const handleOpenSwap = () => {
+    if (!currentFileId) {
+      message.warning('请先打开一个文件');
+      return;
+    }
+    setSwapModalOpen(true);
+  };
 
   // 打开文件合并
   const handleOpenMerge = () => {
@@ -232,6 +243,15 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
         }}
       />
 
+      <CoordinateSwapModal
+        open={swapModalOpen}
+        onClose={() => setSwapModalOpen(false)}
+        onSuccess={() => {
+          setSwapModalOpen(false);
+          onCloseDrawer?.();
+        }}
+      />
+
       {/* 清除数据确认模态框 */}
       <Modal
         title="⚠️ 危险操作"
@@ -275,31 +295,6 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
       
       <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
         <Flex vertical gap={16} style={{ width: '100%', maxWidth: 600 }}>
-        {/* 文件合并卡片 */}
-        <Card size="small">
-          <Flex vertical gap={12}>
-            <Flex align="center" gap={8}>
-              <MergeCellsOutlined style={{ fontSize: 18, color: '#52c41a' }} />
-              <span className="font-semibold">文件合并</span>
-            </Flex>
-            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
-              将多个测量文件合并为一个文件，统一管理点位数据
-            </div>
-            <Button 
-              icon={<MergeCellsOutlined />}
-              onClick={handleOpenMerge}
-              disabled={files.length < 2}
-            >
-              合并文件
-            </Button>
-            {files.length < 2 && (
-              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
-                💡 至少需要 2 个文件才能合并
-              </div>
-            )}
-          </Flex>
-        </Card>
-
         {/* 数据导出卡片 */}
         <Card size="small">
           <Flex vertical gap={12}>
@@ -326,6 +321,56 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
                 导出所有文件
               </Button>
             </Flex>
+          </Flex>
+        </Card>
+
+        {/* 文件合并卡片 */}
+        <Card size="small">
+          <Flex vertical gap={12}>
+            <Flex align="center" gap={8}>
+              <MergeCellsOutlined style={{ fontSize: 18, color: '#52c41a' }} />
+              <span className="font-semibold">文件合并</span>
+            </Flex>
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
+              将多个测量文件合并为一个文件，统一管理点位数据
+            </div>
+            <Button 
+              icon={<MergeCellsOutlined />}
+              onClick={handleOpenMerge}
+              disabled={files.length < 2}
+            >
+              合并文件
+            </Button>
+            {files.length < 2 && (
+              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
+                💡 至少需要 2 个文件才能合并
+              </div>
+            )}
+          </Flex>
+        </Card>
+
+        {/* 坐标反转卡片 */}
+        <Card size="small">
+          <Flex vertical gap={12}>
+            <Flex align="center" gap={8}>
+              <SwapOutlined style={{ fontSize: 18, color: '#722ed1' }} />
+              <span className="font-semibold">坐标反转</span>
+            </Flex>
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
+              交换选中点位的 X 和 Y 坐标值
+            </div>
+            <Button 
+              icon={<SwapOutlined />}
+              onClick={handleOpenSwap}
+              disabled={!currentFileId}
+            >
+              反转坐标
+            </Button>
+            {!currentFileId && (
+              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
+                💡 请先打开一个文件
+              </div>
+            )}
           </Flex>
         </Card>
 

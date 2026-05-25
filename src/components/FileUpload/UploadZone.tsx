@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, message, Modal } from 'antd';
+import { Upload, Modal, App } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import JSZip from 'jszip';
@@ -20,6 +20,7 @@ interface UploadZoneProps {
 }
 
 export function UploadZone({ onFileUploaded }: UploadZoneProps) {
+  const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [zipModalOpen, setZipModalOpen] = useState(false);
@@ -100,6 +101,11 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
       // 解析文件
       const parseResult = await fileParser.parse(file, '');
 
+      // 检查是否有编码问题（非法字符）
+      const hasEncodingIssues = parseResult.warnings.some(w => 
+        w.message.includes('点号包含非法字符')
+      );
+
       // 输出详细信息到控制台
       if (parseResult.errors.length > 0) {
         console.warn('文件解析错误:', parseResult.errors);
@@ -113,6 +119,15 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
 
       if (parseResult.warnings.length > 0) {
         console.info('文件解析警告:', parseResult.warnings);
+        
+        // 如果有编码问题，额外提示
+        if (hasEncodingIssues) {
+          message.warning({
+            content: '检测到文件编码问题，建议使用 UTF-8 编码保存文件以避免乱码',
+            duration: 3,
+          });
+        }
+        
         message.info({
           content: `文件解析完成，有 ${parseResult.warnings.length} 个警告（点击查看详情）`,
           duration: 5,
