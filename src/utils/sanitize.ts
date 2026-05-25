@@ -105,7 +105,7 @@ export function isValidNumber(value: unknown): boolean {
 
 /**
  * 验证坐标字符串格式是否合法
- * 只允许数字、小数点、负号
+ * 允许数字、小数点、负号、科学计数法、Infinity、NaN
  */
 export function isValidCoordinateString(str: string): boolean {
   if (!str || typeof str !== 'string') {
@@ -119,9 +119,14 @@ export function isValidCoordinateString(str: string): boolean {
     return false;
   }
   
-  // 只允许：可选的负号 + 数字 + 可选的小数点和小数部分
-  // 例如：123, -123, 123.456, -123.456
-  return /^-?\d+(\.\d+)?$/.test(trimmed);
+  // 允许普通数字、科学计数法、Infinity、-Infinity、NaN
+  const normalNumber = /^-?\d+(\.\d+)?$/;
+  const scientificNotation = /^-?\d+(\.\d+)?[eE][+-]?\d+$/;
+  const specialValues = /^(Infinity|-Infinity|NaN)$/;
+  
+  return normalNumber.test(trimmed) || 
+         scientificNotation.test(trimmed) || 
+         specialValues.test(trimmed);
 }
 
 /**
