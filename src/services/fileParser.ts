@@ -78,6 +78,7 @@ export class DatFileParser implements IFileParser {
         const yStr = parts[3].trim();
         const zStr = parts[4].trim();
         
+        // 先检查是否包含非法字符
         if (!isValidCoordinateString(xStr) || !isValidCoordinateString(yStr) || !isValidCoordinateString(zStr)) {
           // 找出具体哪个坐标有问题
           const invalidCoords: string[] = [];
@@ -87,7 +88,7 @@ export class DatFileParser implements IFileParser {
           
           errors.push({
             line: i + 1,
-            message: `坐标包含非法字符：${invalidCoords.join(', ')}`,
+            message: `坐标值无效：${invalidCoords.join(', ')}`,
             content: line,
           });
           continue;
@@ -97,14 +98,24 @@ export class DatFileParser implements IFileParser {
         const y = parseFloat(yStr);
         const z = parseFloat(zStr);
 
-        // 验证坐标（理论上不会出现 NaN，因为已经验证过字符串格式）
+        // 验证坐标是否为 NaN
         if (isNaN(x) || isNaN(y) || isNaN(z)) {
           errors.push({
             line: i + 1,
-            message: '坐标值无效',
+            message: '坐标值无效：包含 NaN',
             content: line,
           });
           continue;
+        }
+        
+        // 检查 Infinity（添加警告但继续处理）
+        if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
+          warnings.push({
+            line: i + 1,
+            message: '坐标值超出合理范围：包含 Infinity',
+            content: line,
+          });
+          // 不要 continue，让后续的 isValidCoordinate 检查处理
         }
 
         // 验证坐标范围

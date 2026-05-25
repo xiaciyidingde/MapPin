@@ -110,7 +110,7 @@ k15,,-6504.442,365381.400,-0.077
       // 应该有错误
       expect(result.errors.length).toBeGreaterThan(0);
       
-      // 验证错误信息
+      // 验证错误信息（包含"坐标值无效"）
       expect(result.errors[0].message).toContain('坐标值无效');
     });
 
