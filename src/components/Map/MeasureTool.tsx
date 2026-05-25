@@ -1,6 +1,6 @@
 import { useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Polyline, Tooltip } from 'react-leaflet';
-import { message } from 'antd';
+import { App } from 'antd';
 import type { MeasurementPoint } from '../../types';
 import {
   calculateSpatialDistance,
@@ -24,6 +24,7 @@ export interface MeasureToolRef {
 
 export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
   ({ active, onSelectedPointsChange }, ref) => {
+    const { message } = App.useApp();
     const [selectedPoints, setSelectedPoints] = useState<MeasurementPoint[]>([]);
 
     // 处理点击选择
@@ -49,7 +50,7 @@ export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
           return [point];
         }
       });
-    }, [active]);
+    }, [active, message]);
 
     // 暴露选择函数给父组件
     useImperativeHandle(ref, () => ({

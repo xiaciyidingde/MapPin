@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Tag, Popconfirm, Empty, Card, Flex, Input, message, theme } from 'antd';
+import { Button, Tag, Popconfirm, Empty, Card, Flex, Input, App, theme } from 'antd';
 import { DeleteOutlined, FileTextOutlined, SettingOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +15,7 @@ interface FileListProps {
 }
 
 export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
+  const { message } = App.useApp();
   const { token } = theme.useToken();
   const files = useDataStore((state) => state.files);
   const deleteFile = useDataStore((state) => state.deleteFile);
@@ -43,6 +44,7 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
 
   const handleDelete = async (fileId: string) => {
     await deleteFile(fileId);
+    message.success('文件已移至回收站');
     if (currentFileId === fileId) {
       setCurrentFileId(null);
     }

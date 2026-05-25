@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Upload, Modal, App } from 'antd';
+import { useState, useCallback } from 'react';
+import { Upload, App } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import JSZip from 'jszip';
@@ -20,7 +20,7 @@ interface UploadZoneProps {
 }
 
 export function UploadZone({ onFileUploaded }: UploadZoneProps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [uploading, setUploading] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [zipModalOpen, setZipModalOpen] = useState(false);
@@ -36,61 +36,70 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
   const triggerFitToView = useMapStore((state) => state.triggerFitToView);
   const maxPointsPerFile = useSettingsStore((state) => state.maxPointsPerFile);
 
-  // 显示警告详情弹窗
-  const showWarningsModal = (warnings: ParseWarning[]) => {
-    Modal.info({
-      title: `解析警告 (${warnings.length} 个)`,
+  // 显示解析结果（错误和警告）
+  const showParseResultModal = useCallback((errors: ParseError[], warnings: ParseWarning[]) => {
+    const hasErrors = errors.length > 0;
+    const hasWarnings = warnings.length > 0;
+    
+    if (!hasErrors && !hasWarnings) return;
+    
+    modal.info({
+      title: '文件解析结果',
+      icon: null,
       width: 600,
       centered: true,
       content: (
         <div style={{ maxHeight: 400, overflow: 'auto' }}>
-          {warnings.map((warning, index) => (
-            <div key={index} style={{ marginBottom: 12, padding: 8, background: '#fff7e6', borderRadius: 4 }}>
-              <div style={{ fontWeight: 500, color: '#fa8c16' }}>
-                第 {warning.line} 行
+          {/* 错误部分 */}
+          {hasErrors && (
+            <div style={{ marginBottom: hasWarnings ? 16 : 0 }}>
+              <div style={{ fontWeight: 'bold', color: '#ff4d4f', marginBottom: 8, fontSize: 14 }}>
+                错误 ({errors.length} 个) - 以下行已跳过
               </div>
-              <div style={{ marginTop: 4, fontSize: 13 }}>
-                {warning.message}
-              </div>
-              {warning.content && (
-                <div style={{ marginTop: 4, fontSize: 12, color: '#8c8c8c', fontFamily: 'monospace', background: '#fafafa', padding: 4, borderRadius: 2 }}>
-                  {warning.content}
+              {errors.map((error, index) => (
+                <div key={`error-${index}`} style={{ marginBottom: 12, padding: 8, background: '#fff2f0', borderRadius: 4, borderLeft: '3px solid #ff4d4f' }}>
+                  <div style={{ fontWeight: 500, color: '#ff4d4f' }}>
+                    第 {error.line} 行
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 13, color: '#595959' }}>
+                    {error.message}
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 12, color: '#8c8c8c', fontFamily: 'monospace', background: '#fafafa', padding: 4, borderRadius: 2 }}>
+                    {error.content}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          )}
+          
+          {/* 警告部分 */}
+          {hasWarnings && (
+            <div>
+              <div style={{ fontWeight: 'bold', color: '#fa8c16', marginBottom: 8, fontSize: 14 }}>
+                警告 ({warnings.length} 个) - 已自动处理
+              </div>
+              {warnings.map((warning, index) => (
+                <div key={`warning-${index}`} style={{ marginBottom: 12, padding: 8, background: '#fff7e6', borderRadius: 4, borderLeft: '3px solid #fa8c16' }}>
+                  <div style={{ fontWeight: 500, color: '#fa8c16' }}>
+                    第 {warning.line} 行
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 13 }}>
+                    {warning.message}
+                  </div>
+                  {warning.content && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: '#8c8c8c', fontFamily: 'monospace', background: '#fafafa', padding: 4, borderRadius: 2 }}>
+                      {warning.content}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ),
       okText: '知道了',
     });
-  };
-
-  // 显示错误详情弹窗
-  const showErrorsModal = (errors: ParseError[]) => {
-    Modal.error({
-      title: `解析错误 (${errors.length} 个)`,
-      width: 600,
-      centered: true,
-      content: (
-        <div style={{ maxHeight: 400, overflow: 'auto' }}>
-          {errors.map((error, index) => (
-            <div key={index} style={{ marginBottom: 12, padding: 8, background: '#fff2f0', borderRadius: 4 }}>
-              <div style={{ fontWeight: 500, color: '#ff4d4f' }}>
-                第 {error.line} 行
-              </div>
-              <div style={{ marginTop: 4, fontSize: 13, color: '#595959' }}>
-                {error.message}
-              </div>
-              <div style={{ marginTop: 4, fontSize: 12, color: '#8c8c8c', fontFamily: 'monospace' }}>
-                {error.content}
-              </div>
-            </div>
-          ))}
-        </div>
-      ),
-      okText: '知道了',
-    });
-  };
+  }, [modal]);
 
   // 处理文件导入（在用户确认配置后）
   const handleFileImport = async (file: File, config: ProjectionConfig, customFileName?: string) => {
@@ -101,24 +110,19 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
       // 解析文件
       const parseResult = await fileParser.parse(file, '');
 
-      // 检查是否有编码问题（非法字符）
+      // 检查是否有编码问题（Unicode 替换字符）
       const hasEncodingIssues = parseResult.warnings.some(w => 
-        w.message.includes('点号包含非法字符')
+        w.content && w.content.includes('�')
+      ) || parseResult.errors.some(e => 
+        e.content && e.content.includes('�')
       );
 
-      // 输出详细信息到控制台
-      if (parseResult.errors.length > 0) {
-        console.warn('文件解析错误:', parseResult.errors);
-        message.warning({
-          content: `文件解析完成，但有 ${parseResult.errors.length} 个错误行被跳过（点击查看详情）`,
-          duration: 5,
-          onClick: () => showErrorsModal(parseResult.errors),
-          style: { cursor: 'pointer' },
+      // 如果有错误或警告，显示统一的解析结果
+      if (parseResult.errors.length > 0 || parseResult.warnings.length > 0) {
+        console.warn('文件解析问题:', {
+          errors: parseResult.errors,
+          warnings: parseResult.warnings
         });
-      }
-
-      if (parseResult.warnings.length > 0) {
-        console.info('文件解析警告:', parseResult.warnings);
         
         // 如果有编码问题，额外提示
         if (hasEncodingIssues) {
@@ -128,10 +132,23 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
           });
         }
         
+        // 显示统一的解析结果模态框
+        const hasErrors = parseResult.errors.length > 0;
+        const hasWarnings = parseResult.warnings.length > 0;
+        
+        let summaryText = '文件解析完成';
+        if (hasErrors && hasWarnings) {
+          summaryText += `，有 ${parseResult.errors.length} 个错误和 ${parseResult.warnings.length} 个警告`;
+        } else if (hasErrors) {
+          summaryText += `，有 ${parseResult.errors.length} 个错误`;
+        } else {
+          summaryText += `，有 ${parseResult.warnings.length} 个警告`;
+        }
+        
         message.info({
-          content: `文件解析完成，有 ${parseResult.warnings.length} 个警告（点击查看详情）`,
+          content: `${summaryText}（点击查看详情）`,
           duration: 5,
-          onClick: () => showWarningsModal(parseResult.warnings),
+          onClick: () => showParseResultModal(parseResult.errors, parseResult.warnings),
           style: { cursor: 'pointer' },
         });
       }
@@ -188,7 +205,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
         const currentFile = files.find(f => f.id === currentFileId);
         const currentFileName = currentFile?.name || '未知文件';
 
-        Modal.confirm({
+        modal.confirm({
           title: '已有打开的文件',
           content: `当前已打开文件「${currentFileName}」，是否切换到新上传的文件「${finalFileName}」？`,
           okText: '切换到新文件',
@@ -366,7 +383,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
       if (failCount === 0) {
         message.success(`成功导入 ${successCount} 个文件`);
       } else {
-        Modal.warning({
+        modal.warning({
           title: '导入完成',
           content: (
             <div>

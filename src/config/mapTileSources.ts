@@ -12,9 +12,11 @@
 import { appConfig } from './appConfig';
 
 /**
- * 天地图默认 Token 池（固定分配 + 故障转移）
+ * 动态获取天地图 Token 池
  */
-const DEFAULT_TIANDITU_TOKENS = appConfig.map.tianDiTuTokens;
+function getTiandituTokens(): string[] {
+  return appConfig.map.tianDiTuTokens || [];
+}
 
 // Token 黑名单（会话期间有效，页面刷新后清空）
 const tokenBlacklist = new Set<number>();
@@ -26,7 +28,7 @@ let hasShownWarning = false;
  * 检查是否所有 Token 都已失败
  */
 export function areAllTokensFailed(): boolean {
-  return tokenBlacklist.size >= DEFAULT_TIANDITU_TOKENS.length;
+  return tokenBlacklist.size >= getTiandituTokens().length;
 }
 
 /**
@@ -49,9 +51,10 @@ export function markWarningAsShown(): void {
  */
 function getUserTokenIndex(): number {
   const STORAGE_KEY = 'mappin_token_index';
+  const tokens = getTiandituTokens();
   
   // 如果没有公共 Token，返回 0
-  if (!DEFAULT_TIANDITU_TOKENS || DEFAULT_TIANDITU_TOKENS.length === 0) {
+  if (!tokens || tokens.length === 0) {
     return 0;
   }
   
@@ -60,13 +63,13 @@ function getUserTokenIndex(): number {
   
   if (savedIndex !== null) {
     const index = parseInt(savedIndex, 10);
-    if (!isNaN(index) && index >= 0 && index < DEFAULT_TIANDITU_TOKENS.length) {
+    if (!isNaN(index) && index >= 0 && index < tokens.length) {
       return index;
     }
   }
   
   // 如果没有保存的索引，随机生成一个并保存
-  const randomIndex = Math.floor(Math.random() * DEFAULT_TIANDITU_TOKENS.length);
+  const randomIndex = Math.floor(Math.random() * tokens.length);
   localStorage.setItem(STORAGE_KEY, randomIndex.toString());
   
   return randomIndex;
@@ -83,8 +86,10 @@ function isTokenBlacklisted(index: number): boolean {
  * 获取下一个可用的 Token 索引（跳过黑名单）
  */
 function getNextAvailableTokenIndex(currentIndex: number): number {
-  for (let i = 1; i <= DEFAULT_TIANDITU_TOKENS.length; i++) {
-    const nextIndex = (currentIndex + i) % DEFAULT_TIANDITU_TOKENS.length;
+  const tokens = getTiandituTokens();
+  
+  for (let i = 1; i <= tokens.length; i++) {
+    const nextIndex = (currentIndex + i) % tokens.length;
     if (!isTokenBlacklisted(nextIndex)) {
       return nextIndex;
     }
@@ -134,8 +139,11 @@ export function getTiandituToken(userToken?: string): string {
     return userToken.trim();
   }
   
+  // 动态获取公共 Token 池
+  const tokens = getTiandituTokens();
+  
   // 检查是否有公共 Token 池
-  if (!DEFAULT_TIANDITU_TOKENS || DEFAULT_TIANDITU_TOKENS.length === 0) {
+  if (!tokens || tokens.length === 0) {
     console.warn('未配置公共天地图 Token，请在应用设置中配置您的个人 Token');
     return ''; // 返回空字符串，地图将无法加载
   }
@@ -149,7 +157,7 @@ export function getTiandituToken(userToken?: string): string {
     localStorage.setItem('mappin_token_index', tokenIndex.toString());
   }
   
-  return DEFAULT_TIANDITU_TOKENS[tokenIndex];
+  return tokens[tokenIndex];
 }
 
 export interface MapTileSource {

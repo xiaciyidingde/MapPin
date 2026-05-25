@@ -1,4 +1,4 @@
-import { Modal, Form, Select, InputNumber, Space, Button, message, Input, theme } from 'antd';
+import { Modal, Form, Select, InputNumber, Space, Button, App, Input, theme } from 'antd';
 import { AimOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { useDataStore } from '../../store';
@@ -15,6 +15,7 @@ interface FileSettingsProps {
 }
 
 export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
+  const { message } = App.useApp();
   const { token } = theme.useToken();
   const files = useDataStore((state) => state.files);
   const points = useDataStore((state) => state.points);

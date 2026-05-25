@@ -26,12 +26,25 @@ export function FitViewControl() {
     }
   }, [map, currentFileId, points]);
 
-  // 监听触发器变化
+  // 监听触发器变化（只在触发器变化时执行，不响应 points 变化）
   useEffect(() => {
     if (fitToViewTrigger > 0) {
-      performFitToView();
+      // 直接在这里执行，避免依赖 performFitToView
+      if (currentFileId) {
+        const currentPoints = points.get(currentFileId) || [];
+        const validPoints = currentPoints.filter((p) => p.lat && p.lng);
+
+        if (validPoints.length > 0) {
+          const bounds = validPoints.map((p) => [p.lat!, p.lng!] as [number, number]);
+          map.fitBounds(bounds, { 
+            padding: [50, 50],
+            maxZoom: 24
+          });
+        }
+      }
     }
-  }, [fitToViewTrigger, performFitToView]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitToViewTrigger]); // 只依赖 fitToViewTrigger，忽略其他依赖
 
   useEffect(() => {
     // 创建自定义控件

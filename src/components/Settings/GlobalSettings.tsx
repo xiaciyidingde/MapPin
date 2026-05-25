@@ -1,4 +1,4 @@
-import { Form, InputNumber, Space, Select, Input, Alert, Button, message, theme } from 'antd';
+import { Form, InputNumber, Space, Select, Input, Alert, Button, App, theme } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useState, useMemo, useEffect } from 'react';
 import { useSettingsStore } from '../../store';
@@ -7,6 +7,7 @@ import { appConfig } from '../../config/appConfig';
 import { isValidApiKey, sanitizeApiKey } from '../../utils/sanitize';
 
 export function GlobalSettings() {
+  const { message } = App.useApp();
   const [showToken, setShowToken] = useState(false);
   const { token } = theme.useToken();
   
@@ -47,7 +48,7 @@ export function GlobalSettings() {
       setMapTileSource(firstAvailable);
       message.info(`当前底图已被禁用，已自动切换到 ${mapSources[0].name}`);
     }
-  }, [mapTileSource, mapSources, setMapTileSource]);
+  }, [mapTileSource, mapSources, setMapTileSource, message]);
 
   // 处理 API Key 输入
   const handleApiKeyChange = (key: 'tianditu' | 'amap', value: string) => {

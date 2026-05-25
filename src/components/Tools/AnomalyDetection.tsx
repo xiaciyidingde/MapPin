@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, message, Popconfirm } from 'antd';
+import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, App, Popconfirm } from 'antd';
 import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisibleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
@@ -12,6 +12,7 @@ interface AnomalyDetectionProps {
 }
 
 export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: AnomalyDetectionProps) {
+  const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
   const deletePoint = useDataStore((state) => state.deletePoint);

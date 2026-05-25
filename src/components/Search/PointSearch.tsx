@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Input, Tag, Empty, Dropdown, Button, Spin, message, theme } from 'antd';
+import { Input, Tag, Empty, Dropdown, Button, Spin, App, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, CloseCircleFilled, EnvironmentOutlined, GlobalOutlined, DownOutlined } from '@ant-design/icons';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
@@ -61,6 +61,7 @@ function isNearbySearch(query: string): boolean {
 }
 
 export function PointSearch({ disabled = false }: { disabled?: boolean }) {
+  const { message } = App.useApp();
   const [searchText, setSearchText] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [matchedPoints, setMatchedPoints] = useState<MeasurementPoint[]>([]);
@@ -277,7 +278,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
         clearTimeout(searchTimerRef.current);
       }
     };
-  }, [searchText, searchMode, tianDiTuToken, center, zoom, mapBounds, userLocation]);
+  }, [searchText, searchMode, tianDiTuToken, center, zoom, mapBounds, userLocation, message]);
 
   // 点击外部关闭
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import { useDataStore } from '../store/useDataStore';
 import { isValidPointNumber } from '../utils/sanitize';
 import type { MeasurementPoint } from '../types/measurement';
@@ -9,6 +9,7 @@ import type { MeasurementPoint } from '../types/measurement';
  * 统一处理点位重命名的逻辑
  */
 export function usePointRename(currentFileId: string | null) {
+  const { message } = App.useApp();
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [renamingPoint, setRenamingPoint] = useState<MeasurementPoint | null>(null);
   const [newPointNumber, setNewPointNumber] = useState('');
@@ -96,7 +97,7 @@ export function usePointRename(currentFileId: string | null) {
     } catch {
       message.error('重命名失败');
     }
-  }, [currentFileId, renamingPoint, newPointNumber, newCode, points, updatePoint, closeRenameModal]);
+  }, [currentFileId, renamingPoint, newPointNumber, newCode, points, updatePoint, closeRenameModal, message]);
 
   return {
     renameModalOpen,

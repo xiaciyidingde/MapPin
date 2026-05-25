@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
-import { Tag, Button, message, Popconfirm } from 'antd';
+import { Tag, Button, App, Popconfirm } from 'antd';
 import { SwapOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
 import { useMapStore, useDataStore, useSettingsStore } from '../../store';
 import { getMarkerIcon, createSelectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
@@ -11,7 +11,7 @@ import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
 import { RenamePointModal } from '../common/RenamePointModal';
 import { usePointRename } from '../../hooks/usePointRename';
-import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken, hasShownTokenWarning, markWarningAsShown } from '../../config/mapTileSources';
+import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken } from '../../config/mapTileSources';
 import type { MeasurementPoint } from '../../types';
 import type { Marker as LeafletMarker } from 'leaflet';
 import { appConfig } from '../../config/appConfig';
@@ -39,6 +39,7 @@ function AttributionController({ baseMapMode }: { baseMapMode: 'map' | 'grid' })
 
 // 点位信息弹窗组件
 function PointPopup({ point }: { point: MeasurementPoint }) {
+  const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
   const files = useDataStore((state) => state.files);
@@ -379,6 +380,7 @@ function MeasureModeStyle({ active }: { active: boolean }) {
 }
 
 export function MapView({ measureActive = false }: { measureActive?: boolean }) {
+  const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const center = useMapStore((state) => state.center);
   const zoom = useMapStore((state) => state.zoom);
@@ -399,13 +401,75 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
 
   // Token 切换计数器，用于强制刷新 TileLayer
   const [tokenSwitchCount, setTokenSwitchCount] = useState(0);
+  
+  // 标记会话期间是否已显示过 token 失败警告
+  const hasShownTokenFailureWarning = useRef(false);
+  
+  // 检查是否有可用的底图源（每次组件挂载时检查）
+  useEffect(() => {
+    const disabledSources = appConfig.map.disabledTileSources || [];
+    const allSources = Object.keys(MAP_TILE_SOURCES);
+    
+    // 获取所有未被禁用的底图源
+    const availableSources = allSources.filter(sourceId => !disabledSources.includes(sourceId));
+    
+    // 如果所有底图都被禁用
+    if (availableSources.length === 0) {
+      message.warning('当前没有可用的地图底图，请在全局设置中配置天地图 Token', 3);
+      return;
+    }
+    
+    // 检查当前底图源是否需要 token
+    const currentSource = MAP_TILE_SOURCES[mapTileSource];
+    const needsToken = currentSource?.requiresToken;
+    const hasUserToken = apiKeys.tianditu && apiKeys.tianditu.trim().length > 0;
+    const hasPublicTokens = appConfig.map.tianDiTuTokens && appConfig.map.tianDiTuTokens.length > 0;
+    
+    // 如果当前底图需要 token 但没有配置
+    if (needsToken && !hasUserToken && !hasPublicTokens) {
+      // 检查是否有其他不需要 token 的可用底图
+      const hasOtherAvailableMap = availableSources.some(sourceId => {
+        const source = MAP_TILE_SOURCES[sourceId];
+        return !source.requiresToken;
+      });
+      
+      // 如果没有其他可用底图，显示提示
+      if (!hasOtherAvailableMap) {
+        message.warning('当前没有可用的地图底图，请在全局设置中配置天地图 Token', 3);
+      }
+    }
+  }, [apiKeys.tianditu, mapTileSource, message]);
 
   // 获取当前地图源配置
   const tileSourceConfig = useMemo(() => {
     const source = MAP_TILE_SOURCES[mapTileSource];
+    const disabledSources = appConfig.map.disabledTileSources || [];
+    const allSources = Object.keys(MAP_TILE_SOURCES);
+    const availableSources = allSources.filter(sourceId => !disabledSources.includes(sourceId));
     
-    const url = getMapTileUrl(mapTileSource, apiKeys.tianditu);
-    const annotationLayerUrl = getAnnotationLayerUrl(mapTileSource, apiKeys.tianditu);
+    const needsToken = source?.requiresToken;
+    const hasUserToken = apiKeys.tianditu && apiKeys.tianditu.trim().length > 0;
+    const hasPublicTokens = appConfig.map.tianDiTuTokens && appConfig.map.tianDiTuTokens.length > 0;
+    
+    // 判断是否应该阻止瓦片加载
+    let shouldBlockTiles = false;
+    
+    if (availableSources.length === 0) {
+      // 所有底图都被禁用
+      shouldBlockTiles = true;
+    } else if (needsToken && !hasUserToken && !hasPublicTokens) {
+      // 当前底图需要 token 但没有配置
+      // 检查是否有其他不需要 token 的可用底图
+      const hasOtherAvailableMap = availableSources.some(sourceId => {
+        const s = MAP_TILE_SOURCES[sourceId];
+        return !s.requiresToken;
+      });
+      shouldBlockTiles = !hasOtherAvailableMap;
+    }
+    
+    const url = shouldBlockTiles ? '' : getMapTileUrl(mapTileSource, apiKeys.tianditu);
+    const annotationLayerUrl = shouldBlockTiles ? undefined : getAnnotationLayerUrl(mapTileSource, apiKeys.tianditu);
+    
     return {
       url,
       attribution: source?.attribution || '',
@@ -586,7 +650,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
                   }
                   
                   // 如果已经显示过警告，不再处理（避免重复提示）
-                  if (hasShownTokenWarning()) {
+                  if (hasShownTokenFailureWarning.current) {
                     return;
                   }
                   
@@ -597,8 +661,8 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
                     // 成功切换，更新计数器强制刷新 TileLayer
                     setTokenSwitchCount(prev => prev + 1);
                   } else {
-                    // 所有 Token 都已失败，显示错误提示
-                    markWarningAsShown();
+                    // 所有 Token 都已失败，显示错误提示（会话期间只显示一次）
+                    hasShownTokenFailureWarning.current = true;
                     
                     message.error({
                       content: '所有默认 Token 都已失败，请申请个人 Token 以获得稳定服务',

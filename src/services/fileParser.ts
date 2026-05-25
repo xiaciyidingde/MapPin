@@ -7,7 +7,7 @@ import type {
   ProjectionConfig,
 } from '../types';
 import { identifyPointType } from '../utils/pointType';
-import { isValidCoordinate, sanitizePointNumber } from '../utils/sanitize';
+import { isValidCoordinate, sanitizePointNumber, isValidCoordinateString } from '../utils/sanitize';
 import { appConfig } from '../config/appConfig';
 
 // 解析错误
@@ -72,11 +72,32 @@ export class DatFileParser implements IFileParser {
 
         let pointNumber = parts[0].trim();
         const code = parts[1].trim() || undefined; // 编码（可能为空）
-        const x = parseFloat(parts[2]);
-        const y = parseFloat(parts[3]);
-        const z = parseFloat(parts[4]);
+        
+        // 验证坐标字符串格式（在 parseFloat 之前）
+        const xStr = parts[2].trim();
+        const yStr = parts[3].trim();
+        const zStr = parts[4].trim();
+        
+        if (!isValidCoordinateString(xStr) || !isValidCoordinateString(yStr) || !isValidCoordinateString(zStr)) {
+          // 找出具体哪个坐标有问题
+          const invalidCoords: string[] = [];
+          if (!isValidCoordinateString(xStr)) invalidCoords.push(`X=${xStr}`);
+          if (!isValidCoordinateString(yStr)) invalidCoords.push(`Y=${yStr}`);
+          if (!isValidCoordinateString(zStr)) invalidCoords.push(`Z=${zStr}`);
+          
+          errors.push({
+            line: i + 1,
+            message: `坐标包含非法字符：${invalidCoords.join(', ')}`,
+            content: line,
+          });
+          continue;
+        }
+        
+        const x = parseFloat(xStr);
+        const y = parseFloat(yStr);
+        const z = parseFloat(zStr);
 
-        // 验证坐标
+        // 验证坐标（理论上不会出现 NaN，因为已经验证过字符串格式）
         if (isNaN(x) || isNaN(y) || isNaN(z)) {
           errors.push({
             line: i + 1,
