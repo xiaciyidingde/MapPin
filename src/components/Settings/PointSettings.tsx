@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Button, Input, Dropdown, message, Checkbox, Empty } from 'antd';
+import { Button, Input, Dropdown, App, Checkbox, Empty } from 'antd';
 import type { MenuProps } from 'antd';
 import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
@@ -16,6 +16,7 @@ interface PointSettingsProps {
 }
 
 export function PointSettings({ onClose }: PointSettingsProps) {
+  const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
   const files = useDataStore((state) => state.files);

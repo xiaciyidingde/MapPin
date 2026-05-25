@@ -1,4 +1,4 @@
-import { Modal, Form, Select, InputNumber, Space, Button, message, Input, theme } from 'antd';
+import { Modal, Form, Select, InputNumber, Space, Button, App, Input, theme } from 'antd';
 import { AimOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import type { ProjectionConfig } from '../../types';
@@ -21,6 +21,7 @@ export function ProjectionConfigModal({
   onCancel,
   okText = '确定并导入', // 默认值
 }: ProjectionConfigModalProps) {
+  const { message } = App.useApp();
   const { token } = theme.useToken();
   // 从全局设置读取默认值
   const globalCoordinateSystem = useSettingsStore((state) => state.coordinateSystem);
@@ -64,7 +65,7 @@ export function ProjectionConfigModal({
         return prev;
       });
     }
-  }, [open, userLocation, projectionType]);
+  }, [open, userLocation, projectionType, message]);
 
   // 自动计算中央经线
   const handleAutoCalculate = () => {

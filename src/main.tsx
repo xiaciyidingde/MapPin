@@ -1,8 +1,7 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
-import App from './App.tsx'
+import { Root } from './Root'
 import { registerServiceWorker } from './utils/registerSW'
 import { enableTouchOptimization, isTouchDevice, optimizeIOSInput } from './utils/touchOptimization'
 
@@ -17,8 +16,4 @@ if (isTouchDevice()) {
   optimizeIOSInput();
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+createRoot(document.getElementById('root')!).render(<Root />)

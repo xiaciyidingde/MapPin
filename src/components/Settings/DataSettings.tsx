@@ -1,34 +1,47 @@
-import { Button, Card, Flex, message, Modal, Checkbox, theme } from 'antd';
-import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined } from '@ant-design/icons';
+import { Button, Card, Flex, App, Modal, Checkbox, theme } from 'antd';
+import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined, SwapOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { ExportConfigModal, type ExportConfig } from '../FileUpload/ExportConfigModal';
 import { RecycleBinDrawer } from './RecycleBinDrawer';
 import { FileMergeModal } from '../FileMerge/FileMergeModal';
+import { CoordinateSwapModal } from './CoordinateSwapModal';
+import { FileExportModal } from '../FileExport/FileExportModal';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
-import { exportFile, exportMultipleFiles } from '../../services/exportService';
 import { db } from '../../db/schema';
-import type { MeasurementFile, MeasurementPoint } from '../../types/measurement';
 
 interface DataSettingsProps {
   onCloseDrawer?: () => void;
 }
 
 export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
+  const { message } = App.useApp();
   const { token } = theme.useToken();
-  const { files, loadPoints, clearRecycleBin, loadFiles } = useDataStore();
+  const { files, loadFiles } = useDataStore();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [recycleBinOpen, setRecycleBinOpen] = useState(false);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
-  const [exportMode, setExportMode] = useState<'current' | 'all'>('current');
-  const [exporting, setExporting] = useState(false);
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [clearDataModalOpen, setClearDataModalOpen] = useState(false);
   const [clearOptions, setClearOptions] = useState({
     files: true,
     recycleBin: true,
     settings: false,
   });
+
+  // 打开导出界面
+  const handleOpenExport = () => {
+    setExportModalOpen(true);
+  };
+
+  // 打开坐标反转
+  const handleOpenSwap = () => {
+    if (!currentFileId) {
+      message.warning('请先打开一个文件');
+      return;
+    }
+    setSwapModalOpen(true);
+  };
 
   // 打开文件合并
   const handleOpenMerge = () => {
@@ -37,90 +50,6 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
       return;
     }
     setMergeModalOpen(true);
-  };
-
-  // 导出当前文件
-  const handleExportCurrent = () => {
-    const currentFile = files.find(f => f.id === currentFileId);
-    
-    if (!currentFile) {
-      message.warning('没有打开的文件，请先在文件列表中选择文件');
-      return;
-    }
-    
-    setExportMode('current');
-    setExportModalOpen(true);
-  };
-
-  // 导出所有文件
-  const handleExportAll = () => {
-    if (files.length === 0) {
-      message.warning('没有可导出的文件');
-      return;
-    }
-    
-    setExportMode('all');
-    setExportModalOpen(true);
-  };
-
-  // 确认导出
-  const handleExportConfirm = async (config: ExportConfig) => {
-    setExporting(true);
-    try {
-      if (exportMode === 'current') {
-        // 导出当前文件
-        const currentFile = files.find(f => f.id === currentFileId);
-        
-        if (!currentFile) {
-          message.warning('没有打开的文件');
-          return;
-        }
-        
-        // 加载点位数据
-        await loadPoints(currentFile.id);
-        
-        // 重新获取最新的 store 状态
-        const currentPoints = useDataStore.getState().points;
-        const filePoints = currentPoints.get(currentFile.id) || [];
-        
-        if (filePoints.length === 0) {
-          message.warning('当前文件没有点位数据');
-          return;
-        }
-
-        exportFile(currentFile, filePoints, config);
-        message.success(`已导出文件：${currentFile.name}`);
-      } else {
-        // 导出所有文件 - 需要加载所有点位
-        const filesWithPoints: Array<{ file: MeasurementFile; points: MeasurementPoint[] }> = [];
-        
-        for (const file of files) {
-          // 加载点位数据
-          await loadPoints(file.id);
-          
-          // 重新获取最新的 store 状态
-          const currentPoints = useDataStore.getState().points;
-          const filePoints = currentPoints.get(file.id) || [];
-          
-          if (filePoints.length > 0) {
-            filesWithPoints.push({ file, points: filePoints });
-          }
-        }
-
-        if (filesWithPoints.length === 0) {
-          message.warning('没有可导出的点位数据');
-          return;
-        }
-
-        await exportMultipleFiles(filesWithPoints, config);
-        message.success(`已导出 ${filesWithPoints.length} 个文件`);
-      }
-    } catch (error) {
-      message.error('导出失败：' + (error instanceof Error ? error.message : '未知错误'));
-    } finally {
-      setExporting(false);
-      setExportModalOpen(false);
-    }
   };
 
   // 查看回收站
@@ -138,6 +67,7 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
       okButtonProps: { danger: true },
       centered: true,
       onOk: async () => {
+        const { clearRecycleBin } = useDataStore.getState();
         const hide = message.loading('正在清空回收站...', 0);
         try {
           await clearRecycleBin();
@@ -209,13 +139,9 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
 
   return (
     <>
-      <ExportConfigModal
+      <FileExportModal
         open={exportModalOpen}
-        onCancel={() => !exporting && setExportModalOpen(false)}
-        onConfirm={handleExportConfirm}
-        loading={exporting}
-        mode={exportMode}
-        defaultFileName={exportMode === 'current' && currentFileId ? files.find(f => f.id === currentFileId)?.name.replace(/\.dat$/i, '') : undefined}
+        onClose={() => setExportModalOpen(false)}
       />
       
       <RecycleBinDrawer
@@ -228,6 +154,15 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
         onClose={() => setMergeModalOpen(false)}
         onSuccess={() => {
           setMergeModalOpen(false);
+          onCloseDrawer?.();
+        }}
+      />
+
+      <CoordinateSwapModal
+        open={swapModalOpen}
+        onClose={() => setSwapModalOpen(false)}
+        onSuccess={() => {
+          setSwapModalOpen(false);
           onCloseDrawer?.();
         }}
       />
@@ -275,6 +210,31 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
       
       <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
         <Flex vertical gap={16} style={{ width: '100%', maxWidth: 600 }}>
+        {/* 数据导出卡片 */}
+        <Card size="small">
+          <Flex vertical gap={12}>
+            <Flex align="center" gap={8}>
+              <DownloadOutlined style={{ fontSize: 18, color: '#1890ff' }} />
+              <span className="font-semibold">数据导出</span>
+            </Flex>
+            <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
+              将测量数据导出为文件，支持单个或多个文件导出
+            </div>
+            <Button 
+              icon={<DownloadOutlined />}
+              onClick={handleOpenExport}
+              disabled={files.length === 0}
+            >
+              导出数据
+            </Button>
+            {files.length === 0 && (
+              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
+                💡 暂无可导出的文件
+              </div>
+            )}
+          </Flex>
+        </Card>
+
         {/* 文件合并卡片 */}
         <Card size="small">
           <Flex vertical gap={12}>
@@ -300,32 +260,28 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
           </Flex>
         </Card>
 
-        {/* 数据导出卡片 */}
+        {/* 坐标反转卡片 */}
         <Card size="small">
           <Flex vertical gap={12}>
             <Flex align="center" gap={8}>
-              <DownloadOutlined style={{ fontSize: 18, color: '#1890ff' }} />
-              <span className="font-semibold">数据导出</span>
+              <SwapOutlined style={{ fontSize: 18, color: '#722ed1' }} />
+              <span className="font-semibold">坐标反转</span>
             </Flex>
             <div style={{ fontSize: 14, color: token.colorTextSecondary }}>
-              将测量数据导出为文件，方便备份和分享
+              交换选中点位的 X 和 Y 坐标值
             </div>
-            <Flex gap={8}>
-              <Button 
-                icon={<DownloadOutlined />}
-                onClick={handleExportCurrent}
-                style={{ flex: 1 }}
-              >
-                导出当前文件
-              </Button>
-              <Button 
-                icon={<DownloadOutlined />}
-                onClick={handleExportAll}
-                style={{ flex: 1 }}
-              >
-                导出所有文件
-              </Button>
-            </Flex>
+            <Button 
+              icon={<SwapOutlined />}
+              onClick={handleOpenSwap}
+              disabled={!currentFileId}
+            >
+              反转坐标
+            </Button>
+            {!currentFileId && (
+              <div style={{ fontSize: 12, color: token.colorTextTertiary }}>
+                💡 请先打开一个文件
+              </div>
+            )}
           </Flex>
         </Card>
 

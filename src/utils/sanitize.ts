@@ -104,6 +104,27 @@ export function isValidNumber(value: unknown): boolean {
 }
 
 /**
+ * 验证坐标字符串格式是否合法
+ * 只允许数字、小数点、负号
+ */
+export function isValidCoordinateString(str: string): boolean {
+  if (!str || typeof str !== 'string') {
+    return false;
+  }
+  
+  const trimmed = str.trim();
+  
+  // 空字符串不合法
+  if (trimmed.length === 0) {
+    return false;
+  }
+  
+  // 只允许：可选的负号 + 数字 + 可选的小数点和小数部分
+  // 例如：123, -123, 123.456, -123.456
+  return /^-?\d+(\.\d+)?$/.test(trimmed);
+}
+
+/**
  * 验证坐标值是否在合理范围内
  */
 export function isValidCoordinate(x: number, y: number, z: number): boolean {

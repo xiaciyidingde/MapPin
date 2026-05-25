@@ -1,4 +1,4 @@
-import { Drawer, Button, Input, Select, Empty, Spin, message, Modal, Flex, Card, Collapse, Tag } from 'antd';
+import { Drawer, Button, Input, Select, Empty, Spin, App, Modal, Flex, Card, Collapse, Tag } from 'antd';
 import { SearchOutlined, DeleteOutlined, RollbackOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect, useCallback } from 'react';
 import { useDataStore } from '../../store/useDataStore';
@@ -25,6 +25,7 @@ interface RecycleBinGroup {
 }
 
 export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
+  const { message } = App.useApp();
   const { loadRecycleBin, restoreFromRecycleBin, deleteFromRecycleBin, clearRecycleBin } = useDataStore();
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<RecycleBinGroup[]>([]);
@@ -84,7 +85,7 @@ export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
     } finally {
       setLoading(false);
     }
-  }, [loadRecycleBin, groupByFile]);
+  }, [loadRecycleBin, groupByFile, message]);
 
   // 恢复选中项
   const handleRestore = async (itemIds: string[]) => {

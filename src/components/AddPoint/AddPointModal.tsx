@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Modal, Form, Input, InputNumber, message } from 'antd';
+import { Modal, Form, Input, InputNumber, App } from 'antd';
 import { v4 as uuidv4 } from 'uuid';
 import { useDataStore, useMapStore } from '../../store';
 import { coordinateConverter } from '../../services/coordinateConverter';
@@ -12,6 +12,7 @@ interface AddPointModalProps {
 }
 
 export function AddPointModal({ open, onClose }: AddPointModalProps) {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   
