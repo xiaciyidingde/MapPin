@@ -6,28 +6,109 @@
  * 这里保留的是不应该被用户修改的内部常量
  */
 
-import { appConfig } from './appConfig';
+import { getAppConfig } from './appConfig';
 
 // 文件上传配置（从 app.config.json 加载）
-export const FILE_UPLOAD = {
-  MAX_SIZE_MB: appConfig.file.maxSizeMB,
-  ALLOWED_TYPES: appConfig.file.allowedTypes,
-  ALLOWED_EXTENSIONS: appConfig.file.allowedExtensions,
-} as const;
+export const getFileUploadConfig = () => {
+  const config = getAppConfig();
+  return {
+    MAX_SIZE_MB: config.file.maxSizeMB,
+    ALLOWED_TYPES: config.file.allowedTypes,
+    ALLOWED_EXTENSIONS: config.file.allowedExtensions,
+  } as const;
+};
 
 // 回收站配置（从 app.config.json 加载）
-export const RECYCLE_BIN = {
-  MAX_CAPACITY: appConfig.recycleBin.maxCapacity,
-} as const;
+export const getRecycleBinConfig = () => {
+  const config = getAppConfig();
+  return {
+    MAX_CAPACITY: config.recycleBin.maxCapacity,
+  } as const;
+};
 
 // 坐标系统配置（从 app.config.json 加载）
-export const COORDINATE_SYSTEM = {
-  DEFAULT: appConfig.coordinate.defaultSystem as 'CGCS2000',
-  DEFAULT_PROJECTION: appConfig.coordinate.defaultProjection as 'gauss-3',
-  DEFAULT_CENTRAL_MERIDIAN: appConfig.coordinate.defaultCentralMeridian,
-  CENTRAL_MERIDIAN_MIN: appConfig.coordinate.centralMeridianRange.min,
-  CENTRAL_MERIDIAN_MAX: appConfig.coordinate.centralMeridianRange.max,
-} as const;
+export const getCoordinateSystemConfig = () => {
+  const config = getAppConfig();
+  return {
+    DEFAULT: config.coordinate.defaultSystem as 'CGCS2000',
+    DEFAULT_PROJECTION: config.coordinate.defaultProjection as 'gauss-3',
+    DEFAULT_CENTRAL_MERIDIAN: config.coordinate.defaultCentralMeridian,
+    CENTRAL_MERIDIAN_MIN: config.coordinate.centralMeridianRange.min,
+    CENTRAL_MERIDIAN_MAX: config.coordinate.centralMeridianRange.max,
+  } as const;
+};
+
+// 地图配置（从 app.config.json 加载）
+export const getMapConfig = () => {
+  const config = getAppConfig();
+  return {
+    DEFAULT_CENTER: config.map.defaultCenter as { lat: number; lng: number },
+    DEFAULT_ZOOM: config.map.defaultZoom,
+    MIN_ZOOM: config.map.minZoom,
+    MAX_ZOOM: config.map.maxZoom,
+    CLUSTER: {
+      RADIUS: config.map.cluster.radius,
+      MAX_ZOOM: config.map.cluster.maxZoom,
+    },
+  } as const;
+};
+
+// 性能配置（从 app.config.json 加载）
+export const getPerformanceConfig = () => {
+  const config = getAppConfig();
+  return {
+    LARGE_FILE_THRESHOLD: config.performance.largeFileThreshold,
+    VIRTUAL_SCROLL_THRESHOLD: config.performance.virtualScrollThreshold,
+  } as const;
+};
+
+// 搜索配置（从 app.config.json 加载）
+export const getSearchConfig = () => {
+  const config = getAppConfig();
+  return {
+    DEBOUNCE_DELAY: config.search.debounceDelay,
+    MIN_LENGTH: config.search.minLength,
+  } as const;
+};
+
+// 向后兼容的导出（使用 getter）
+export const FILE_UPLOAD = new Proxy({} as ReturnType<typeof getFileUploadConfig>, {
+  get(_target, prop) {
+    return getFileUploadConfig()[prop as keyof ReturnType<typeof getFileUploadConfig>];
+  }
+});
+
+export const RECYCLE_BIN = new Proxy({} as ReturnType<typeof getRecycleBinConfig>, {
+  get(_target, prop) {
+    return getRecycleBinConfig()[prop as keyof ReturnType<typeof getRecycleBinConfig>];
+  }
+});
+
+export const COORDINATE_SYSTEM = new Proxy({} as ReturnType<typeof getCoordinateSystemConfig>, {
+  get(_target, prop) {
+    return getCoordinateSystemConfig()[prop as keyof ReturnType<typeof getCoordinateSystemConfig>];
+  }
+});
+
+export const MAP = new Proxy({} as ReturnType<typeof getMapConfig>, {
+  get(_target, prop) {
+    return getMapConfig()[prop as keyof ReturnType<typeof getMapConfig>];
+  }
+});
+
+export const PERFORMANCE = new Proxy({} as ReturnType<typeof getPerformanceConfig>, {
+  get(_target, prop) {
+    return getPerformanceConfig()[prop as keyof ReturnType<typeof getPerformanceConfig>];
+  }
+});
+
+export const SEARCH = new Proxy({} as ReturnType<typeof getSearchConfig>, {
+  get(_target, prop) {
+    return getSearchConfig()[prop as keyof ReturnType<typeof getSearchConfig>];
+  }
+});
+
+
 
 // 坐标范围配置（用于验证）
 export const COORDINATE_RANGE = {
@@ -62,40 +143,20 @@ export const FILE_NAME = {
   VALID_PATTERN: /^[\u4e00-\u9fa5a-zA-Z0-9_\-\s()（）]+$/,
 } as const;
 
-// 地图配置（从 app.config.json 加载）
-export const MAP = {
-  DEFAULT_CENTER: appConfig.map.defaultCenter as { lat: number; lng: number },
-  DEFAULT_ZOOM: appConfig.map.defaultZoom,
-  MIN_ZOOM: appConfig.map.minZoom,
-  MAX_ZOOM: appConfig.map.maxZoom,
-  CLUSTER: {
-    RADIUS: appConfig.map.cluster.radius,
-    MAX_ZOOM: appConfig.map.cluster.maxZoom,
-  },
-} as const;
-
-// 性能配置（从 app.config.json 加载）
-export const PERFORMANCE = {
-  LARGE_FILE_THRESHOLD: appConfig.performance.largeFileThreshold,
-  VIRTUAL_SCROLL_THRESHOLD: appConfig.performance.virtualScrollThreshold,
-} as const;
-
 // 导出配置（内部常量，不建议修改）
 export const EXPORT = {
   DEFAULT_FORMAT: 'dat' as const,
   SUPPORTED_FORMATS: ['dat', 'csv'] as const,
 } as const;
 
-// 搜索配置（从 app.config.json 加载）
-export const SEARCH = {
-  DEBOUNCE_DELAY: appConfig.search.debounceDelay,
-  MIN_LENGTH: appConfig.search.minLength,
-} as const;
-
-// 错误消息配置
+// 错误消息配置（使用 getter 延迟访问配置）
 export const ERROR_MESSAGES = {
-  FILE_TOO_LARGE: `文件大小不能超过 ${FILE_UPLOAD.MAX_SIZE_MB}MB`,
-  FILE_TYPE_INVALID: `只支持 ${FILE_UPLOAD.ALLOWED_EXTENSIONS} 格式文件`,
+  get FILE_TOO_LARGE() {
+    return `文件大小不能超过 ${FILE_UPLOAD.MAX_SIZE_MB}MB`;
+  },
+  get FILE_TYPE_INVALID() {
+    return `只支持 ${FILE_UPLOAD.ALLOWED_EXTENSIONS} 格式文件`;
+  },
   FILE_NAME_EMPTY: '文件名不能为空',
   FILE_NAME_INVALID: '文件名包含非法字符',
   POINT_NUMBER_EMPTY: '点号不能为空',
@@ -117,4 +178,3 @@ export const SUCCESS_MESSAGES = {
   POINT_RESTORED: '点位已恢复',
   SETTINGS_SAVED: '设置已保存',
 } as const;
-

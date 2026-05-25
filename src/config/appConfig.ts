@@ -1,9 +1,7 @@
 /**
  * 应用配置加载器
- * 从根目录的 app.config.json 加载配置
+ * 从 public/app.config.json 动态加载配置
  */
-
-import appConfigJson from '../../app.config.json';
 
 export interface LinkItem {
   title: string;
@@ -73,5 +71,97 @@ export interface AppConfig {
   };
 }
 
-// 导出配置对象
-export const appConfig: AppConfig = appConfigJson as AppConfig;
+// 初始化阶段配置
+const safeConfig: AppConfig = {
+  app: { name: "MapPin", description: "" },
+  author: { show: false, showLinks: false, links: [] },
+  coordinate: {
+    defaultSystem: "CGCS2000",
+    defaultProjection: "gauss-3",
+    defaultCentralMeridian: 114,
+    centralMeridianRange: { min: 75, max: 135 }
+  },
+  map: {
+    defaultCenter: { lat: 35.0, lng: 105.0 },
+    defaultZoom: 5,
+    minZoom: 3,
+    maxZoom: 18,
+    defaultTileSource: "osm",
+    disabledTileSources: [],
+    cluster: { radius: 60, maxZoom: 16 },
+    tianDiTuTokens: []
+  },
+  file: {
+    maxSizeMB: 50,
+    allowedTypes: ["dat", "zip"],
+    allowedExtensions: ".dat,.zip"
+  },
+  performance: {
+    largeFileThreshold: 1000,
+    virtualScrollThreshold: 100,
+    maxPointsPerFile: 2000
+  },
+  detection: {
+    hrmsThreshold: 0.05,
+    vrmsThreshold: 0.05,
+    duplicateCoordinateTolerance: 0.001,
+    isolatedPointRangeMultiplier: 10
+  },
+  recycleBin: { maxCapacity: 10000 },
+  search: { debounceDelay: 300, minLength: 1 }
+};
+
+let cachedConfig: AppConfig | null = null;
+let configLoadError: Error | null = null;
+
+/**
+ * 加载应用配置
+ */
+export async function loadAppConfig(): Promise<AppConfig> {
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  try {
+    const response = await fetch('/app.config.json');
+    if (!response.ok) {
+      throw new Error(`Failed to load config: ${response.status}`);
+    }
+    const config = await response.json();
+    cachedConfig = config;
+    configLoadError = null;
+    return config;
+  } catch (error) {
+    configLoadError = error as Error;
+    throw error;
+  }
+}
+
+/**
+ * 获取当前配置
+ */
+export function getAppConfig(): AppConfig {
+  return cachedConfig || safeConfig;
+}
+
+/**
+ * 检查配置是否已加载
+ */
+export function isConfigLoaded(): boolean {
+  return cachedConfig !== null;
+}
+
+/**
+ * 获取配置加载错误
+ */
+export function getConfigLoadError(): Error | null {
+  return configLoadError;
+}
+
+// 导出配置对象（向后兼容）
+export const appConfig = new Proxy({} as AppConfig, {
+  get(_target, prop) {
+    return getAppConfig()[prop as keyof AppConfig];
+  }
+});
+
