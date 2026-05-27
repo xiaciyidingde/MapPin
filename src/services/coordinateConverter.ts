@@ -79,6 +79,7 @@ export class CoordinateConverter implements ICoordinateConverter {
       return { lat, lng };
     } catch (error) {
       console.error('坐标转换失败:', error);
+      console.warn(`⚠️ 坐标转换失败，返回原始坐标作为降级处理。源坐标系: ${sourceSystem}, X: ${x}, Y: ${y}`);
       // 返回原始坐标作为经纬度（降级处理）
       return { lat: y, lng: x };
     }
@@ -105,6 +106,7 @@ export class CoordinateConverter implements ICoordinateConverter {
         return { x, y };
       } catch (error) {
         console.error('坐标转换失败:', error);
+        console.warn(`⚠️ 坐标转换失败，返回原始坐标作为降级处理。目标坐标系: ${targetSystem}, Lat: ${lat}, Lng: ${lng}`);
         // 返回原始坐标（降级处理）
         return { x: lng, y: lat };
       }
@@ -118,6 +120,7 @@ export class CoordinateConverter implements ICoordinateConverter {
       return { x, y };
     } catch (error) {
       console.error('坐标转换失败:', error);
+      console.warn(`⚠️ 坐标转换失败，返回原始坐标作为降级处理。目标坐标系: ${targetSystem}, Lat: ${lat}, Lng: ${lng}`);
       // 返回原始坐标（降级处理）
       return { x: lng, y: lat };
     }

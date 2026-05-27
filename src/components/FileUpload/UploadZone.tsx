@@ -8,9 +8,10 @@ import type { ParseWarning, ParseError } from '../../services/fileParser';
 import { coordinateConverter } from '../../services/coordinateConverter';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
-import { ZipImportModal } from './ZipImportModal';
+import { ZipBatchImportModal } from './ZipBatchImportModal';
 import type { ProjectionConfig } from '../../types';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { useFileSwitch } from '../../hooks/useFileSwitch';
 import { isValidFileSize, isValidFileType } from '../../utils/sanitize';
 
 const { Dragger } = Upload;
@@ -27,13 +28,15 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [zipFiles, setZipFiles] = useState<Array<{ name: string; content: string; size: number }>>([]);
   const addFile = useDataStore((state) => state.addFile);
-  const files = useDataStore((state) => state.files);
+  const loadFiles = useDataStore((state) => state.loadFiles);
   const currentFileId = useMapStore((state) => state.currentFileId);
   
   // 使用文件名验证 Hook
   const { validateFileName } = useFileNameValidation();
-  const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
-  const triggerFitToView = useMapStore((state) => state.triggerFitToView);
+  
+  // 使用文件切换 Hook
+  const { switchToFile } = useFileSwitch();
+  
   const maxPointsPerFile = useSettingsStore((state) => state.maxPointsPerFile);
 
   // 显示解析结果（错误和警告）
@@ -197,45 +200,22 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
 
       // 保存到数据库
       await addFile(measurementFile, pointsWithLatLng);
+      
+      // 重新加载文件列表
+      await loadFiles();
 
       message.success(`文件上传成功！共 ${pointsWithLatLng.length} 个碎部点`);
 
-      // 检查是否已有打开的文件
-      if (currentFileId) {
-        const currentFile = files.find(f => f.id === currentFileId);
-        const currentFileName = currentFile?.name || '未知文件';
-
-        modal.confirm({
-          title: '已有打开的文件',
-          content: `当前已打开文件「${currentFileName}」，是否切换到新上传的文件「${finalFileName}」？`,
-          okText: '切换到新文件',
-          cancelText: '保持当前文件',
-          centered: true,
-          onOk: () => {
-            // 切换到新文件
-            setCurrentFileId(measurementFile.id);
-            
-            // 延迟触发 Fit to View，确保点位已加载
-            setTimeout(() => {
-              triggerFitToView();
-            }, 100);
-            
-            // 通知父组件文件已上传
-            onFileUploaded?.();
-          },
-        });
-      } else {
-        // 没有打开的文件，直接打开新文件
-        setCurrentFileId(measurementFile.id);
-
-        // 延迟触发 Fit to View，确保点位已加载
-        setTimeout(() => {
-          triggerFitToView();
-        }, 100);
-        
-        // 通知父组件文件已上传
-        onFileUploaded?.();
-      }
+      // 切换到新文件（如果已有打开的文件则显示确认对话框）
+      switchToFile(measurementFile.id, {
+        confirm: !!currentFileId,
+        confirmContent: currentFileId 
+          ? `当前已打开文件「${useDataStore.getState().files.find(f => f.id === currentFileId)?.name || '未知文件'}」，是否切换到「${measurementFile.name}」？`
+          : undefined,
+        okText: '切换到新文件',
+        cancelText: '保持当前文件',
+        onConfirm: () => onFileUploaded?.()
+      });
     } catch (error) {
       console.error('文件上传失败:', error);
       message.error(
@@ -255,16 +235,31 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
       const zip = new JSZip();
       const zipContent = await zip.loadAsync(file);
       
-      // 提取所有 .dat 文件
-      const datFiles: Array<{ name: string; content: string; size: number }> = [];
+      // 提取所有 .dat 文件并解析获取点数
+      const datFiles: Array<{ name: string; content: string; size: number; pointCount?: number }> = [];
       
       for (const [fileName, zipEntry] of Object.entries(zipContent.files)) {
         if (!zipEntry.dir && fileName.toLowerCase().endsWith('.dat')) {
           const content = await zipEntry.async('text');
+          const name = fileName.split('/').pop() || fileName; // 只保留文件名，去掉路径
+          
+          // 尝试解析文件获取点数
+          let pointCount: number | undefined;
+          try {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const tempFile = new File([blob], name, { type: 'text/plain' });
+            const parseResult = await fileParser.parse(tempFile, '');
+            pointCount = parseResult.points.length;
+          } catch {
+            // 解析失败，不显示点数
+            pointCount = undefined;
+          }
+          
           datFiles.push({
-            name: fileName.split('/').pop() || fileName, // 只保留文件名，去掉路径
+            name,
             content,
             size: content.length,
+            pointCount,
           });
         }
       }
@@ -286,7 +281,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
         return;
       }
       
-      // 多个文件，显示选择对话框
+      // 多个文件，显示批量导入对话框
       setZipFiles(datFiles);
       setZipModalOpen(true);
       
@@ -298,7 +293,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
   };
 
   // 批量导入 ZIP 中的文件
-  const handleZipImport = async (selectedFileNames: string[]) => {
+  const handleZipImport = async (selectedFileNames: string[], config: ProjectionConfig) => {
     setZipModalOpen(false);
     setUploading(true);
     
@@ -333,14 +328,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
             continue;
           }
           
-          // 使用默认配置（后续可以改进为让用户选择）
-          const config: ProjectionConfig = {
-            coordinateSystem: 'CGCS2000',
-            projectionType: 'gauss-3',
-            centralMeridian: 117,
-          };
-          
-          // 创建文件对象
+          // 使用用户选择的配置
           const measurementFile = createMeasurementFile(
             zipFile.name,
             parseResult,
@@ -479,9 +467,9 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
         />
       )}
       
-      <ZipImportModal
+      <ZipBatchImportModal
         open={zipModalOpen}
-        files={zipFiles.map(f => ({ name: f.name, size: f.size }))}
+        files={zipFiles}
         onConfirm={handleZipImport}
         onCancel={() => {
           setZipModalOpen(false);

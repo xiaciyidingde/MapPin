@@ -1,5 +1,38 @@
 # 更新日志
 
+## [v1.2.4.0] - 2026-05-26
+
+### 代码质量优化
+- 抽取 14 个公共工具模块，统一点位验证、坐标转换、距离计算、文件操作等逻辑
+- Store 副作用分离，错误处理提升到调用方 Hook，使用结构化错误码
+- App.tsx 改用 useRef、MapView 纯函数外移、条件变量抽取等 React 最佳实践优化
+- 删除 pointType.ts 死代码
+
+### 组件重构
+- 抽取 BottomDrawer、PointPopup、MultiStepModal 等通用组件
+- FitViewControl 简化冗余逻辑
+
+### 性能优化
+- renderMarker / tileSourceConfig 添加 useCallback / useMemo 优化
+- validPoints 分组优化
+- GridLayer setState 50ms 去抖
+
+### 问题修复
+- BottomDrawer 修复废弃警告（height 改用 size）
+- MeasureTool 修复渲染期间 setState 错误和消息重复显示问题
+
+### ZIP 批量导入增强
+- 新增 ZipBatchImportModal 三步骤导入界面
+
+### 测试完善
+- 单元测试 327 个 + 集成测试 44 个，总计 371 个测试
+
+### 体验优化
+- 地名搜索支持"最近"关键词
+- 用户输入搜索框时，如果悬浮窗未显示则显示
+
+---
+
 ## [v1.2.3.1] - 2026-05-25
 
 ### 修复

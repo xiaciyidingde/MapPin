@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useDataStore } from '../../store';
 import { useMapStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
+import { useFileSwitch } from '../../hooks/useFileSwitch';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
 import type { MeasurementFile, ProjectionConfig } from '../../types';
 
@@ -22,7 +23,9 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   const addFile = useDataStore((state) => state.addFile);
   const currentFileId = useMapStore((state) => state.currentFileId);
   const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
-  const triggerFitToView = useMapStore((state) => state.triggerFitToView);
+  
+  // 使用文件切换 Hook
+  const { switchToFile } = useFileSwitch();
   
   // 使用文件名验证 Hook
   const { validateFileName } = useFileNameValidation();
@@ -33,13 +36,9 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   const [pendingFileName, setPendingFileName] = useState('');
 
   const handleFileClick = (fileId: string) => {
-    setCurrentFileId(fileId);
-    // 延迟触发 Fit to View
-    setTimeout(() => {
-      triggerFitToView();
-    }, 100);
-    // 通知父组件文件已被选中
-    onFileSelect?.();
+    switchToFile(fileId, {
+      onConfirm: () => onFileSelect?.()
+    });
   };
 
   const handleDelete = async (fileId: string) => {
@@ -98,15 +97,14 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
       // 添加文件
       await addFile(newFile, []);
       
-      // 自动打开新创建的文件
-      setCurrentFileId(newFile.id);
+      // 自动打开新创建的文件（空文件不需要 fitToView）
+      switchToFile(newFile.id, {
+        onConfirm: () => onFileSelect?.()
+      });
       
       message.success(`已创建文件 "${fileNameWithExt}"`);
       setNewFileName('');
       setPendingFileName('');
-      
-      // 通知父组件文件已被选中
-      onFileSelect?.();
     } catch (error) {
       console.error('创建文件失败:', error);
       message.error('创建文件失败');

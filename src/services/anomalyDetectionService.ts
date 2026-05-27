@@ -1,4 +1,5 @@
 import type { MeasurementPoint } from '../types';
+import { calculatePlaneDistance } from '../utils/distanceUtils';
 
 // 异常类型
 export type AnomalyType = 'precision' | 'isolated' | 'duplicate';
@@ -305,9 +306,7 @@ class AnomalyDetectionService {
    * 计算两点之间的平面距离
    */
   private calculateDistance(p1: MeasurementPoint, p2: MeasurementPoint): number {
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
-    return Math.sqrt(dx * dx + dy * dy);
+    return calculatePlaneDistance(p1, p2);
   }
 
   /**

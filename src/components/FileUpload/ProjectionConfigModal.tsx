@@ -5,6 +5,7 @@ import type { ProjectionConfig } from '../../types';
 import { useMapStore, useSettingsStore } from '../../store';
 import { calculateCentralMeridian } from '../../utils/projectionUtils';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { requestLocationAndCalculateMeridian } from '../../utils/locationUtils';
 
 interface ProjectionConfigModalProps {
   open: boolean;
@@ -71,50 +72,14 @@ export function ProjectionConfigModal({
   const handleAutoCalculate = () => {
     if (!userLocation) {
       // 如果没有位置信息，尝试请求位置权限
-      if (navigator.geolocation) {
-        message.loading({ content: '正在获取位置信息...', key: 'location' });
-        
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const location = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            
-            // 更新全局位置状态
-            useMapStore.getState().setUserLocation(location);
-            
-            // 计算中央经线
-            const calculatedMeridian = calculateCentralMeridian(location.lng, projectionType);
-            setCentralMeridian(calculatedMeridian);
-            
-            message.success({ 
-              content: `已自动计算中央经线：${calculatedMeridian}°E`, 
-              key: 'location' 
-            });
-          },
-          (error) => {
-            message.destroy('location');
-            
-            if (error.code === error.PERMISSION_DENIED) {
-              message.error('位置权限被拒绝，请在浏览器设置中允许访问位置信息');
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-              message.error('无法获取位置信息，请检查设备定位功能是否开启');
-            } else if (error.code === error.TIMEOUT) {
-              message.error('获取位置信息超时，请重试');
-            } else {
-              message.error('无法获取位置信息，请稍后再试');
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          }
-        );
-      } else {
-        message.error('您的浏览器不支持定位功能');
-      }
+      requestLocationAndCalculateMeridian(
+        projectionType,
+        (location, meridian) => {
+          // 更新全局位置状态
+          useMapStore.getState().setUserLocation(location);
+          setCentralMeridian(meridian);
+        }
+      );
       return;
     }
 

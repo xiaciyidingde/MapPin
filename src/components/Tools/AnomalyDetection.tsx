@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, App, Popconfirm } from 'antd';
+import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, Popconfirm } from 'antd';
 import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisibleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
+import { usePointDelete } from '../../hooks/usePointDelete';
 import { anomalyDetectionService } from '../../services/anomalyDetectionService';
 import type { Anomaly } from '../../services/anomalyDetectionService';
 
@@ -12,10 +13,8 @@ interface AnomalyDetectionProps {
 }
 
 export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: AnomalyDetectionProps) {
-  const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
-  const deletePoint = useDataStore((state) => state.deletePoint);
   const setView = useMapStore((state) => state.setView);
   const setSelectedPointId = useMapStore((state) => state.setSelectedPointId);
   const hrmsThreshold = useSettingsStore((state) => state.hrmsThreshold);
@@ -24,6 +23,9 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   const isolatedPointRangeMultiplier = useSettingsStore((state) => state.isolatedPointRangeMultiplier);
 
   const [ignoredAnomalies, setIgnoredAnomalies] = useState<Set<string>>(new Set());
+  
+  // 使用点位删除 Hook
+  const { handleDelete: deletePointById } = usePointDelete(currentFileId);
 
   const currentPoints = useMemo(
     () => (currentFileId ? points.get(currentFileId) || [] : []),
@@ -80,14 +82,7 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
 
   // 删除点位
   const handleDelete = async (anomaly: Anomaly) => {
-    if (!currentFileId) return;
-    
-    try {
-      await deletePoint(currentFileId, anomaly.pointId);
-      message.success(`已删除点 ${anomaly.pointNumber}`);
-    } catch {
-      message.error('删除失败');
-    }
+    await deletePointById(anomaly.pointId, anomaly.pointNumber);
   };
 
   // 获取严重程度颜色

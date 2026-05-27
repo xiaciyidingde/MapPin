@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { MeasurementFile, MeasurementPoint, RecycleBinItem } from '../types';
 import { dataService } from '../services/dataService';
-import { message } from 'antd';
 import { useSettingsStore } from './useSettingsStore';
 
 interface DataStore {
@@ -15,6 +14,7 @@ interface DataStore {
   addFile: (file: MeasurementFile, points: MeasurementPoint[]) => Promise<void>;
   updateFile: (id: string, updates: Partial<MeasurementFile>) => Promise<void>;
   deleteFile: (id: string, moveToRecycleBin?: boolean) => Promise<void>;
+  recalculateFileStats: (fileId: string) => Promise<void>;
 
   // 测量点操作
   addPoint: (fileId: string, point: MeasurementPoint) => Promise<void>;
@@ -60,8 +60,7 @@ export const useDataStore = create<DataStore>((set) => ({
     // 检查点位数量是否超过限制
     const maxPointsPerFile = useSettingsStore.getState().maxPointsPerFile;
     if (points.length > maxPointsPerFile) {
-      message.error(`文件点位数量（${points.length}）超过限制（${maxPointsPerFile}），无法加载。请在全局设置中调整限制。`);
-      throw new Error(`点位数量超过限制：${points.length} > ${maxPointsPerFile}`);
+      throw new Error(`POINTS_LIMIT_EXCEEDED:${points.length}:${maxPointsPerFile}`);
     }
     
     set((state) => {
@@ -136,6 +135,19 @@ export const useDataStore = create<DataStore>((set) => ({
         files: state.files.filter((f) => f.id !== id),
         points: newPoints,
       };
+    });
+  },
+
+  recalculateFileStats: async (fileId: string) => {
+    const state = useDataStore.getState();
+    const points = state.points.get(fileId) || [];
+    const controlPointCount = points.filter(p => p.type === 'control').length;
+    const surveyPointCount = points.filter(p => p.type === 'survey').length;
+    
+    await state.updateFile(fileId, {
+      pointCount: points.length,
+      controlPointCount,
+      surveyPointCount,
     });
   },
 

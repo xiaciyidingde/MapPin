@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, Form, Input, InputNumber, App } from 'antd';
 import { v4 as uuidv4 } from 'uuid';
 import { useDataStore, useMapStore } from '../../store';
-import { coordinateConverter } from '../../services/coordinateConverter';
+import { validatePointNumber } from '../../utils/pointValidation';
+import { convertCoordinatesForFile } from '../../utils/coordinateUtils';
+import { useNextPointNumber } from '../../hooks/useNextPointNumber';
 import { isValidPointNumber } from '../../utils/sanitize';
 import type { MeasurementPoint } from '../../types';
 
@@ -25,7 +27,7 @@ export function AddPointModal({ open, onClose }: AddPointModalProps) {
   const points = useDataStore((state) => state.points);
   const files = useDataStore((state) => state.files);
   const addPoint = useDataStore((state) => state.addPoint);
-  const updateFile = useDataStore((state) => state.updateFile);
+  const recalculateFileStats = useDataStore((state) => state.recalculateFileStats);
 
   // 缓存当前文件
   const currentFile = useMemo(
@@ -33,30 +35,12 @@ export function AddPointModal({ open, onClose }: AddPointModalProps) {
     [files, currentFileId]
   );
 
-  // 生成下一个点位号
-  const generateNextPointNumber = useCallback((): string => {
-    if (!currentFileId) return '1';
-    
-    const currentPoints = points.get(currentFileId) || [];
-    if (currentPoints.length === 0) return '1';
-    
-    // 提取所有纯数字点位号
-    const numericPointNumbers = currentPoints
-      .map(p => p.pointNumber)
-      .filter(num => /^\d+$/.test(num))
-      .map(num => parseInt(num, 10));
-    
-    if (numericPointNumbers.length === 0) return '1';
-    
-    const maxNumber = Math.max(...numericPointNumbers);
-    return String(maxNumber + 1);
-  }, [currentFileId, points]);
+  // 使用 Hook 生成下一个点位号
+  const nextPointNumber = useNextPointNumber(currentFileId);
 
   // 当 Modal 打开时初始化表单
   useEffect(() => {
     if (open && currentFileId) {
-      const nextPointNumber = generateNextPointNumber();
-      
       form.setFieldsValue({
         pointNumber: nextPointNumber,
         lat: userLocation?.lat,
@@ -64,7 +48,7 @@ export function AddPointModal({ open, onClose }: AddPointModalProps) {
         z: 0,
       });
     }
-  }, [open, currentFileId, userLocation, form, generateNextPointNumber]);
+  }, [open, currentFileId, userLocation, form, nextPointNumber]);
 
   // 处理添加
   const handleAdd = async () => {
@@ -93,27 +77,21 @@ export function AddPointModal({ open, onClose }: AddPointModalProps) {
       }
 
       // 检查点位号是否重复
-      const existingPoint = currentPoints.find(p => p.pointNumber === values.pointNumber);
-      if (existingPoint) {
-        message.error(`点号 ${values.pointNumber} 已存在`);
+      const validation = validatePointNumber(values.pointNumber, currentPoints);
+      if (!validation.valid) {
+        message.error(validation.error);
         setLoading(false);
         return;
       }
 
-      // 判断用户是否修改了经纬度（直接与 userLocation 比较）
+      // 判断用户是否修改了经纬度
       const isUsingCurrentLocation = 
         userLocation &&
         values.lat === userLocation.lat && 
         values.lng === userLocation.lng;
 
       // 将经纬度转换为投影坐标（使用文件的投影配置）
-      const projected = coordinateConverter.projectFromWGS84(
-        values.lat,
-        values.lng,
-        currentFile.projectionConfig.coordinateSystem,
-        currentFile.projectionConfig.projectionType,
-        currentFile.projectionConfig.centralMeridian
-      );
+      const projected = convertCoordinatesForFile(values.lat, values.lng, currentFile);
 
       // 创建新点位
       const maxOrder = currentPoints.length > 0 
@@ -144,12 +122,8 @@ export function AddPointModal({ open, onClose }: AddPointModalProps) {
       // 添加点位
       await addPoint(currentFileId, newPoint);
 
-      // 更新文件统计
-      const surveyCount = currentPoints.filter(p => p.type === 'survey').length + 1;
-      await updateFile(currentFileId, {
-        pointCount: currentPoints.length + 1,
-        surveyPointCount: surveyCount,
-      });
+      // 重新计算文件统计
+      await recalculateFileStats(currentFileId);
 
       message.success(`已添加点位 ${values.pointNumber}`);
       

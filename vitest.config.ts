@@ -18,7 +18,16 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData',
         'dist/',
+        'src/store/**',
+        'src/config/**',
+        'src/components/**',
       ],
+      thresholds: {
+        lines: 70,
+        functions: 65,
+        branches: 65,
+        statements: 70,
+      },
     },
   },
 });

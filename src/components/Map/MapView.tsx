@@ -1,20 +1,36 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
-import { Tag, Button, App, Popconfirm } from 'antd';
-import { SwapOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
+import { Button, App } from 'antd';
+import { CloseOutlined } from '@ant-design/icons';
 import { useMapStore, useDataStore, useSettingsStore } from '../../store';
 import { getMarkerIcon, createSelectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
 import { FitViewControl } from './FitViewControl';
 import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
-import { RenamePointModal } from '../common/RenamePointModal';
-import { usePointRename } from '../../hooks/usePointRename';
+import { PointPopup } from './PointPopup';
 import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken } from '../../config/mapTileSources';
 import type { MeasurementPoint } from '../../types';
 import type { Marker as LeafletMarker } from 'leaflet';
 import { appConfig } from '../../config/appConfig';
+import { createVirtualPoint, fitMapToPoints } from '../../utils/mapUtils';
+
+// 动态计算聚合半径：点越多，聚合半径越大
+function calculateClusterRadius(pointCount: number): number {
+  if (pointCount < 1000) return 50;
+  if (pointCount < 2000) return 60;
+  if (pointCount < 5000) return 70;
+  return 80;
+}
+
+// 动态计算停止聚合的缩放级别：点越多，越晚停止聚合
+function calculateDisableClusteringZoom(pointCount: number): number {
+  if (pointCount < 1000) return 16;
+  if (pointCount < 2000) return 17;
+  if (pointCount < 5000) return 18;
+  return 19;
+}
 
 // 动态控制 Attribution 显示的组件
 function AttributionController({ baseMapMode }: { baseMapMode: 'map' | 'grid' }) {
@@ -37,236 +53,6 @@ function AttributionController({ baseMapMode }: { baseMapMode: 'map' | 'grid' })
   return null;
 }
 
-// 点位信息弹窗组件
-function PointPopup({ point }: { point: MeasurementPoint }) {
-  const { message } = App.useApp();
-  const currentFileId = useMapStore((state) => state.currentFileId);
-  const points = useDataStore((state) => state.points);
-  const files = useDataStore((state) => state.files);
-  const updatePoint = useDataStore((state) => state.updatePoint);
-  const updateFile = useDataStore((state) => state.updateFile);
-  const deletePoint = useDataStore((state) => state.deletePoint);
-  
-  // 使用点位重命名 Hook
-  const {
-    renameModalOpen,
-    renamingPoint,
-    newPointNumber,
-    newCode,
-    setNewPointNumber,
-    setNewCode,
-    openRenameModal,
-    closeRenameModal,
-    confirmRename,
-  } = usePointRename(currentFileId);
-
-  const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
-
-  // 处理过长的点号，在中间显示省略号
-  const formatPointNumber = (pointNumber: string, maxLength: number = 20) => {
-    if (pointNumber.length <= maxLength) {
-      return pointNumber;
-    }
-    const frontChars = Math.ceil(maxLength / 2) - 2;
-    const backChars = Math.floor(maxLength / 2) - 2;
-    return `${pointNumber.substring(0, frontChars)}...${pointNumber.substring(pointNumber.length - backChars)}`;
-  };
-
-  // 切换类型
-  const handleToggleType = async () => {
-    if (!currentFileId) return;
-    
-    const newType = point.type === 'survey' ? 'control' : 'survey';
-    try {
-      await updatePoint(currentFileId, point.id, { type: newType });
-      
-      // 重新计算文件的控制点和测量点数量
-      const updatedPoints = currentPoints.map(p => 
-        p.id === point.id ? { ...p, type: newType } : p
-      );
-      const controlPointCount = updatedPoints.filter(p => p.type === 'control').length;
-      const surveyPointCount = updatedPoints.filter(p => p.type === 'survey').length;
-      
-      // 更新文件统计信息
-      const currentFile = files.find(f => f.id === currentFileId);
-      if (currentFile) {
-        await updateFile(currentFileId, {
-          controlPointCount,
-          surveyPointCount,
-        });
-      }
-      
-      message.success(`已将点 ${point.pointNumber} 标记为${newType === 'control' ? '控制点' : '碎部点'}`);
-    } catch {
-      message.error('修改失败');
-    }
-  };
-
-  // 打开重命名对话框
-  const handleOpenRename = () => {
-    openRenameModal(point);
-  };
-
-  // 删除点
-  const handleDeletePoint = async () => {
-    if (!currentFileId) return;
-    
-    try {
-      await deletePoint(currentFileId, point.id);
-      message.success(`已删除点 ${point.pointNumber}`);
-    } catch {
-      message.error('删除失败');
-    }
-  };
-
-  return (
-    <>
-      <Popup 
-        minWidth={260} 
-        maxWidth={260}
-        closeButton={false} 
-        autoClose={true} 
-        closeOnEscapeKey={true}
-        className="compact-popup"
-      >
-        <div style={{ padding: '8px 10px' }}>
-          {/* 点号和类型标签 */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: 8,
-            gap: 8
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: 6,
-              flex: 1,
-              minWidth: 0
-            }}>
-              <span 
-                style={{ 
-                  fontSize: 20, 
-                  fontWeight: 600,
-                  color: '#1890ff',
-                  lineHeight: 1
-                }}
-                title={point.pointNumber}
-              >
-                {formatPointNumber(point.pointNumber)}
-              </span>
-              {point.isManuallyAdded && (
-                <span style={{ 
-                  fontSize: 12, 
-                  color: '#8c8c8c',
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1
-                }}>
-                  手动添加
-                </span>
-              )}
-            </div>
-            <Tag color={point.type === 'control' ? 'red' : 'blue'} style={{ margin: 0, fontSize: 15, padding: '2px 8px', flexShrink: 0 }}>
-              {point.type === 'control' ? '控制点' : '碎部点'}
-            </Tag>
-          </div>
-
-          {/* 编码信息 */}
-          {point.code && (
-            <div style={{ fontSize: 12, color: '#999', marginTop: 4, marginBottom: 4 }}>
-              编码: {point.code}
-            </div>
-          )}
-
-          {/* 坐标信息和操作按钮 */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            {/* 左侧：坐标信息 */}
-            <div style={{ 
-              fontSize: 15, 
-              color: '#595959',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-              flex: 1
-            }}>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 28 }}>
-                <span style={{ color: '#8c8c8c', width: 22 }}>X:</span>
-                <span style={{ fontWeight: 500 }}>{point.x.toFixed(3)}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 28 }}>
-                <span style={{ color: '#8c8c8c', width: 22 }}>Y:</span>
-                <span style={{ fontWeight: 500 }}>{point.y.toFixed(3)}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 28 }}>
-                <span style={{ color: '#8c8c8c', width: 22 }}>Z:</span>
-                <span style={{ fontWeight: 500 }}>{point.z.toFixed(3)}</span>
-              </div>
-            </div>
-
-            {/* 右侧：操作按钮 */}
-            <div style={{ 
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4
-            }}>
-              <Popconfirm
-                title="确认切换类型"
-                description={`确定要将点 ${point.pointNumber} 切换为${point.type === 'survey' ? '控制点' : '碎部点'}吗？`}
-                onConfirm={handleToggleType}
-                okText="确认"
-                cancelText="取消"
-              >
-                <Button
-                  size="small"
-                  icon={<SwapOutlined />}
-                  style={{ width: 32, height: 28, padding: 0 }}
-                  title="切换类型"
-                />
-              </Popconfirm>
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={handleOpenRename}
-                style={{ width: 32, height: 28, padding: 0 }}
-                title="重命名"
-              />
-              <Popconfirm
-                title="确认删除"
-                description={`确定要删除点 ${point.pointNumber} 吗？`}
-                onConfirm={handleDeletePoint}
-                okText="删除"
-                cancelText="取消"
-                okButtonProps={{ danger: true }}
-              >
-                <Button
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  style={{ width: 32, height: 28, padding: 0 }}
-                  title="删除"
-                />
-              </Popconfirm>
-            </div>
-          </div>
-        </div>
-      </Popup>
-
-      {/* 重命名对话框 */}
-      <RenamePointModal
-        open={renameModalOpen}
-        point={renamingPoint}
-        newPointNumber={newPointNumber}
-        newCode={newCode}
-        onPointNumberChange={setNewPointNumber}
-        onCodeChange={setNewCode}
-        onConfirm={confirmRename}
-        onCancel={closeRenameModal}
-      />
-    </>
-  );
-}
-
 // 自动调整视野组件
 function AutoFitBounds({ points, fileId }: { points: MeasurementPoint[]; fileId: string | null }) {
   const map = useMap();
@@ -278,15 +64,7 @@ function AutoFitBounds({ points, fileId }: { points: MeasurementPoint[]; fileId:
       prevFileIdRef.current = fileId;
       
       if (points.length > 0) {
-        const validPoints = points.filter((p) => p.lat && p.lng);
-        if (validPoints.length > 0) {
-          const bounds = validPoints.map((p) => [p.lat!, p.lng!] as [number, number]);
-          // 限制最大缩放级别为 24，确保用户还可以继续放大到 25
-          map.fitBounds(bounds, { 
-            padding: [50, 50],
-            maxZoom: 24
-          });
-        }
+        fitMapToPoints(map, points, { padding: [50, 50], maxZoom: 24 });
       }
     }
   }, [fileId, points, map]); // 移除 points.length，使用 points 本身
@@ -397,7 +175,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const showUserLocation = useSettingsStore((state) => state.showUserLocation);
   const showPointLabelsConfig = useSettingsStore((state) => state.showPointLabels);
   const mapTileSource = useSettingsStore((state) => state.mapTileSource);
-  const apiKeys = useSettingsStore((state) => state.apiKeys);
+  const tianDiTuToken = useSettingsStore((state) => state.apiKeys.tianditu);
 
   // Token 切换计数器，用于强制刷新 TileLayer
   const [tokenSwitchCount, setTokenSwitchCount] = useState(0);
@@ -422,7 +200,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
     // 检查当前底图源是否需要 token
     const currentSource = MAP_TILE_SOURCES[mapTileSource];
     const needsToken = currentSource?.requiresToken;
-    const hasUserToken = apiKeys.tianditu && apiKeys.tianditu.trim().length > 0;
+    const hasUserToken = tianDiTuToken && tianDiTuToken.trim().length > 0;
     const hasPublicTokens = appConfig.map.tianDiTuTokens && appConfig.map.tianDiTuTokens.length > 0;
     
     // 如果当前底图需要 token 但没有配置
@@ -438,7 +216,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
         message.warning('当前没有可用的地图底图，请在全局设置中配置天地图 Token', 3);
       }
     }
-  }, [apiKeys.tianditu, mapTileSource, message]);
+  }, [tianDiTuToken, mapTileSource, message]);
 
   // 获取当前地图源配置
   const tileSourceConfig = useMemo(() => {
@@ -448,7 +226,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
     const availableSources = allSources.filter(sourceId => !disabledSources.includes(sourceId));
     
     const needsToken = source?.requiresToken;
-    const hasUserToken = apiKeys.tianditu && apiKeys.tianditu.trim().length > 0;
+    const hasUserToken = tianDiTuToken && tianDiTuToken.trim().length > 0;
     const hasPublicTokens = appConfig.map.tianDiTuTokens && appConfig.map.tianDiTuTokens.length > 0;
     
     // 判断是否应该阻止瓦片加载
@@ -467,8 +245,8 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       shouldBlockTiles = !hasOtherAvailableMap;
     }
     
-    const url = shouldBlockTiles ? '' : getMapTileUrl(mapTileSource, apiKeys.tianditu);
-    const annotationLayerUrl = shouldBlockTiles ? undefined : getAnnotationLayerUrl(mapTileSource, apiKeys.tianditu);
+    const url = shouldBlockTiles ? '' : getMapTileUrl(mapTileSource, tianDiTuToken);
+    const annotationLayerUrl = shouldBlockTiles ? undefined : getAnnotationLayerUrl(mapTileSource, tianDiTuToken);
     
     return {
       url,
@@ -478,7 +256,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       subdomains: source?.subdomains || undefined,
       annotationLayerUrl,
     };
-  }, [mapTileSource, apiKeys.tianditu]);
+  }, [mapTileSource, tianDiTuToken]);
 
   // 存储所有 Marker 的 ref
   const markerRefs = useRef<Map<string, LeafletMarker>>(new Map());
@@ -535,6 +313,22 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
 
   const validPoints = codeFilteredPoints.filter((p) => p.lat && p.lng);
   
+  // 按类型分组，避免多次遍历
+  const { surveyPoints, controlPoints } = useMemo(() => {
+    const survey: MeasurementPoint[] = [];
+    const control: MeasurementPoint[] = [];
+    
+    for (const point of validPoints) {
+      if (point.type === 'survey') {
+        survey.push(point);
+      } else {
+        control.push(point);
+      }
+    }
+    
+    return { surveyPoints: survey, controlPoints: control };
+  }, [validPoints]);
+  
   // 当点位数量大于 500 时，自动禁用点位号悬浮窗以提升性能
   const TOOLTIP_THRESHOLD = 500;
   const showPointLabels = showPointLabelsConfig && currentPoints.length <= TOOLTIP_THRESHOLD;
@@ -544,24 +338,14 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const CLUSTER_THRESHOLD = 500;
   const shouldCluster = validPoints.length >= CLUSTER_THRESHOLD;
   
-  // 动态计算聚合半径：点越多，聚合半径越大
-  const calculateClusterRadius = () => {
-    if (validPoints.length < 1000) return 50;
-    if (validPoints.length < 2000) return 60;
-    if (validPoints.length < 5000) return 70;
-    return 80;
-  };
-  
-  // 动态计算停止聚合的缩放级别：点越多，越晚停止聚合
-  const calculateDisableClusteringZoom = () => {
-    if (validPoints.length < 1000) return 16;
-    if (validPoints.length < 2000) return 17;
-    if (validPoints.length < 5000) return 18;
-    return 19;
-  };
+  // 测量模式下选择虚拟点（用户位置/搜索标记）
+  const handleVirtualPointSelect = useCallback((id: string, name: string, lat: number, lng: number) => {
+    const virtualPoint = createVirtualPoint(id, name, lat, lng);
+    measureToolRef.current?.selectPoint(virtualPoint);
+  }, []);
 
-  // 渲染单个标记点
-  const renderMarker = (point: MeasurementPoint) => {
+  // 渲染单个标记点（使用 useCallback 避免重复创建）
+  const renderMarker = useCallback((point: MeasurementPoint) => {
     // 判断点是否被选中
     const isSelected = selectedPointIds.includes(point.id);
     // 根据选中状态和标签显示设置创建图标
@@ -592,9 +376,13 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
         {!measureActive && <PointPopup point={point} />}
       </Marker>
     );
-  };
+  }, [selectedPointIds, showPointLabels, measureActive]);
 
   // 始终显示地图，即使没有选择文件
+  // 底图过渡显示条件
+  const showMapLayer = baseMapMode === 'map' || (isTransitioning && previousMode === 'map');
+  const showGridLayer = baseMapMode === 'grid' || (isTransitioning && previousMode === 'grid');
+  
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <MapContainer
@@ -616,11 +404,11 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       >
       {/* 根据模式显示不同的底图，使用交叉淡化动画 */}
       {/* 过渡期间同时渲染两个图层 */}
-      {(baseMapMode === 'map' || (isTransitioning && previousMode === 'map')) && (
+      {showMapLayer && (
         <>
           {/* 主地图图层 */}
           <TileLayer
-            key={`${mapTileSource}-${apiKeys.tianditu || 'no-token'}-${tokenSwitchCount}`}
+            key={`${mapTileSource}-${tianDiTuToken || 'no-token'}-${tokenSwitchCount}`}
             attribution={tileSourceConfig.attribution}
             url={tileSourceConfig.url}
             minZoom={3}
@@ -638,7 +426,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
                 // 检测是否是天地图瓦片加载失败（且用户未配置个人 Token）
                 const errorTile = error.tile as HTMLImageElement;
                 const errorUrl = errorTile?.src || '';
-                if (errorUrl.includes('tianditu.gov.cn') && !apiKeys.tianditu) {
+                if (errorUrl.includes('tianditu.gov.cn') && !tianDiTuToken) {
                   console.error('天地图瓦片加载失败，可能是 Token 超限');
                   
                   // 检查是否有公共 Token 配置
@@ -677,7 +465,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
           {/* 标注图层（如果存在） */}
           {tileSourceConfig.annotationLayerUrl && (
             <TileLayer
-              key={`${mapTileSource}-annotation-${apiKeys.tianditu || 'no-token'}-${tokenSwitchCount}`}
+              key={`${mapTileSource}-annotation-${tianDiTuToken || 'no-token'}-${tokenSwitchCount}`}
               url={tileSourceConfig.annotationLayerUrl}
               minZoom={3}
               maxNativeZoom={tileSourceConfig.maxNativeZoom}
@@ -694,7 +482,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
                   // 标注图层失败时也检测（避免重复处理，只记录日志）
                   const errorTile = error.tile as HTMLImageElement;
                   const errorUrl = errorTile?.src || '';
-                  if (errorUrl.includes('tianditu.gov.cn') && !apiKeys.tianditu) {
+                  if (errorUrl.includes('tianditu.gov.cn') && !tianDiTuToken) {
                     console.error('天地图标注图层加载失败');
                   }
                 }
@@ -704,7 +492,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
         </>
       )}
       
-      {(baseMapMode === 'grid' || (isTransitioning && previousMode === 'grid')) && (
+      {showGridLayer && (
         <div 
           style={{ 
             opacity: baseMapMode === 'grid' ? 1 : 0,
@@ -720,8 +508,8 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
         // 点数量 >= 500：使用智能聚合
         <MarkerClusterGroup
           chunkedLoading
-          maxClusterRadius={calculateClusterRadius()}
-          disableClusteringAtZoom={calculateDisableClusteringZoom()}
+          maxClusterRadius={calculateClusterRadius(validPoints.length)}
+          disableClusteringAtZoom={calculateDisableClusteringZoom(validPoints.length)}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
           zoomToBoundsOnClick={true}
@@ -729,27 +517,19 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
           animateAddingMarkers={false}
         >
           {/* 先渲染测量点 */}
-          {validPoints
-            .filter((point) => point.type === 'survey')
-            .map(renderMarker)}
+          {surveyPoints.map(renderMarker)}
 
           {/* 再渲染控制点，确保显示在测量点上层 */}
-          {validPoints
-            .filter((point) => point.type === 'control')
-            .map(renderMarker)}
+          {controlPoints.map(renderMarker)}
         </MarkerClusterGroup>
       ) : (
         // 点数量 < 500：直接渲染，不使用聚合
         <>
           {/* 先渲染测量点 */}
-          {validPoints
-            .filter((point) => point.type === 'survey')
-            .map(renderMarker)}
+          {surveyPoints.map(renderMarker)}
 
           {/* 再渲染控制点，确保显示在测量点上层 */}
-          {validPoints
-            .filter((point) => point.type === 'control')
-            .map(renderMarker)}
+          {controlPoints.map(renderMarker)}
         </>
       )}
 
@@ -761,27 +541,9 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
           zIndexOffset={1000}
           eventHandlers={{
             click: (e) => {
-              // 测量模式下允许选择当前位置
               if (measureActive) {
                 e.originalEvent.stopPropagation();
-                
-                // 创建虚拟的 MeasurementPoint 对象
-                // 对于虚拟点，直接使用经纬度作为 x, y 坐标
-                const userLocationPoint: MeasurementPoint = {
-                  id: 'user-location',
-                  fileId: 'virtual', // 虚拟文件ID
-                  pointNumber: '当前位置',
-                  originalPointNumber: '当前位置',
-                  x: userLocation.lng, // 使用经度作为 x
-                  y: userLocation.lat, // 使用纬度作为 y
-                  z: 0, // 高程未知，设为 0
-                  lat: userLocation.lat,
-                  lng: userLocation.lng,
-                  type: 'survey',
-                  order: -1, // 虚拟顺序
-                };
-                
-                measureToolRef.current?.selectPoint(userLocationPoint);
+                handleVirtualPointSelect('user-location', '当前位置', userLocation.lat, userLocation.lng);
               }
             },
           }}
@@ -841,27 +603,9 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
           zIndexOffset={1100}
           eventHandlers={{
             click: (e) => {
-              // 测量模式下允许选择搜索标记
               if (measureActive) {
                 e.originalEvent.stopPropagation();
-                
-                // 创建虚拟的 MeasurementPoint 对象
-                // 对于虚拟点，直接使用经纬度作为 x, y 坐标
-                const searchMarkerPoint: MeasurementPoint = {
-                  id: 'search-marker',
-                  fileId: 'virtual',
-                  pointNumber: searchMarker.name,
-                  originalPointNumber: searchMarker.name,
-                  x: searchMarker.lng, // 使用经度作为 x
-                  y: searchMarker.lat, // 使用纬度作为 y
-                  z: 0, // 高程设为 0
-                  lat: searchMarker.lat,
-                  lng: searchMarker.lng,
-                  type: 'survey',
-                  order: -1,
-                };
-                
-                measureToolRef.current?.selectPoint(searchMarkerPoint);
+                handleVirtualPointSelect('search-marker', searchMarker.name, searchMarker.lat, searchMarker.lng);
               }
             },
           }}

@@ -4,26 +4,7 @@
  */
 
 import type { MeasurementPoint } from '../types';
-
-/**
- * 使用 Haversine 公式计算两个经纬度点之间的距离
- * @param lat1 第一个点的纬度
- * @param lng1 第一个点的经度
- * @param lat2 第二个点的纬度
- * @param lng2 第二个点的经度
- * @returns 距离（米）
- */
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000; // 地球半径（米）
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+import { calculateHaversineDistance } from '../utils/distanceUtils';
 
 /**
  * 检查点是否为虚拟点（当前位置或搜索标记）
@@ -45,7 +26,10 @@ export function calculateSpatialDistance(
   // 如果任一点是虚拟点，使用经纬度计算
   if (isVirtualPoint(point1) || isVirtualPoint(point2)) {
     if (point1.lat && point1.lng && point2.lat && point2.lng) {
-      const planarDist = haversineDistance(point1.lat, point1.lng, point2.lat, point2.lng);
+      const planarDist = calculateHaversineDistance(
+        { lat: point1.lat, lng: point1.lng },
+        { lat: point2.lat, lng: point2.lng }
+      );
       const dz = point2.z - point1.z;
       return Math.sqrt(planarDist * planarDist + dz * dz);
     }
@@ -73,7 +57,10 @@ export function calculatePlanarDistance(
   // 如果任一点是虚拟点，使用经纬度计算
   if (isVirtualPoint(point1) || isVirtualPoint(point2)) {
     if (point1.lat && point1.lng && point2.lat && point2.lng) {
-      return haversineDistance(point1.lat, point1.lng, point2.lat, point2.lng);
+      return calculateHaversineDistance(
+        { lat: point1.lat, lng: point1.lng },
+        { lat: point2.lat, lng: point2.lng }
+      );
     }
   }
   

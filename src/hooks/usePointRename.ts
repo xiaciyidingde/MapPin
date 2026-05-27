@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { App } from 'antd';
 import { useDataStore } from '../store/useDataStore';
+import { validatePointNumber } from '../utils/pointValidation';
 import { isValidPointNumber } from '../utils/sanitize';
 import type { MeasurementPoint } from '../types/measurement';
 
@@ -61,12 +62,10 @@ export function usePointRename(currentFileId: string | null) {
     // 检查点号是否重复（仅当点号改变时）
     if (trimmedName !== renamingPoint.pointNumber) {
       const currentPoints = points.get(currentFileId) || [];
-      const existingPoint = currentPoints.find(
-        (p) => p.pointNumber === trimmedName && p.id !== renamingPoint.id
-      );
+      const validation = validatePointNumber(trimmedName, currentPoints, renamingPoint.id);
 
-      if (existingPoint) {
-        message.error(`点号 ${trimmedName} 已存在`);
+      if (!validation.valid) {
+        message.error(validation.error);
         return;
       }
     }

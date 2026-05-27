@@ -34,6 +34,7 @@ class CustomGridLayer extends L.GridLayer {
   private gridInterval: number = 100;
   private onIntervalChange?: (interval: number) => void;
   private referenceLatitude: number = 0; // 用于计算经度间距的参考纬度
+  private updateTimer: number | null = null; // 去抖定时器
 
   constructor(options?: L.GridLayerOptions & { onIntervalChange?: (interval: number) => void }) {
     super(options);
@@ -70,10 +71,22 @@ class CustomGridLayer extends L.GridLayer {
     const zoom = coords.z;
     const currentGridInterval = getGridIntervalForZoom(zoom);
     
-    // 只在间距变化时通知
+    // 只在间距变化时通知（使用去抖避免连续 setState）
     if (this.gridInterval !== currentGridInterval) {
       this.gridInterval = currentGridInterval;
-      this.onIntervalChange?.(currentGridInterval);
+      
+      // 清除之前的定时器
+      if (this.updateTimer !== null) {
+        window.clearTimeout(this.updateTimer);
+      }
+      
+      // 设置新的定时器，50ms 后触发更新
+      this.updateTimer = window.setTimeout(() => {
+        if (this.onIntervalChange) {
+          this.onIntervalChange(currentGridInterval);
+        }
+        this.updateTimer = null;
+      }, 50);
     }
 
     // 计算瓦片的地理边界

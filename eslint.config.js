@@ -20,6 +20,12 @@ export default defineConfig([
     },
   },
   {
+    files: ['**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
     files: ['src/components/Settings/PointSettings.tsx'],
     rules: {
       'react-hooks/exhaustive-deps': 'off',

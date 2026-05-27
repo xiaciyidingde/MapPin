@@ -1,4 +1,4 @@
-import { Button, Card, Flex, App, Modal, Checkbox, theme } from 'antd';
+import { Button, Card, Flex, App, Checkbox, theme, Modal } from 'antd';
 import { DownloadOutlined, DeleteOutlined, InboxOutlined, DatabaseOutlined, EyeOutlined, MergeCellsOutlined, SwapOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { RecycleBinDrawer } from './RecycleBinDrawer';
@@ -14,7 +14,7 @@ interface DataSettingsProps {
 }
 
 export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { token } = theme.useToken();
   const { files, loadFiles } = useDataStore();
   const currentFileId = useMapStore((state) => state.currentFileId);
@@ -59,7 +59,7 @@ export function DataSettings({ onCloseDrawer }: DataSettingsProps) {
 
   // 清空回收站
   const handleClearRecycleBin = () => {
-    Modal.confirm({
+    modal.confirm({
       title: '确认清空回收站',
       content: '此操作将永久删除回收站中的所有项目，无法恢复。确定要继续吗？',
       okText: '确认清空',
