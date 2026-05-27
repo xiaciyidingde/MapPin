@@ -8,6 +8,7 @@ import { PointCard } from './PointCard';
 import { RenamePointModal } from '../common/RenamePointModal';
 import { usePointRename } from '../../hooks/usePointRename';
 import { usePointDelete } from '../../hooks/usePointDelete';
+import { useDeleteAnimation } from '../../hooks/useDeleteAnimation';
 import type { MeasurementPoint } from '../../types';
 
 type FilterType = 'all' | 'survey' | 'control' | 'manual';
@@ -44,6 +45,11 @@ export function PointSettings({ onClose }: PointSettingsProps) {
   
   // 使用点位删除 Hook
   const { handleDelete } = usePointDelete(currentFileId);
+  
+  // 使用删除动画 Hook
+  const { deletingIds, handleDelete: handleDeleteWithAnimation } = useDeleteAnimation({
+    type: 'scaleOut',
+  });
 
   const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
   
@@ -186,12 +192,16 @@ export function PointSettings({ onClose }: PointSettingsProps) {
 
   // 使用 useCallback 缓存删除函数
   const handleDeletePoint = useCallback(async (point: MeasurementPoint) => {
-    const success = await handleDelete(point.id, point.pointNumber);
-    // 如果删除成功且点在选中列表中，也要移除
-    if (success) {
-      setSelectedPointIds((prev) => prev.filter((id) => id !== point.id));
-    }
-  }, [handleDelete]);
+    await handleDeleteWithAnimation(point.id, async () => {
+      // 执行删除
+      const success = await handleDelete(point.id, point.pointNumber);
+      
+      // 如果删除成功且点在选中列表中，也要移除
+      if (success) {
+        setSelectedPointIds((prev) => prev.filter((id) => id !== point.id));
+      }
+    });
+  }, [handleDelete, handleDeleteWithAnimation]);
 
   // 使用 useCallback 缓存切换选中函数
   const handleToggleSelect = useCallback((pointId: string) => {
@@ -296,6 +306,7 @@ export function PointSettings({ onClose }: PointSettingsProps) {
                   <PointCard
                     point={point}
                     isSelected={selectedPointIds.includes(point.id)}
+                    isDeleting={deletingIds.has(point.id)}
                     onToggleSelect={handleToggleSelect}
                     onToggleType={handleToggleType}
                     onOpenRename={openRenameModal}

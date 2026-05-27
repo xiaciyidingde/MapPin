@@ -4,6 +4,7 @@ import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisible
 import { Virtuoso } from 'react-virtuoso';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { usePointDelete } from '../../hooks/usePointDelete';
+import { useDeleteAnimation } from '../../hooks/useDeleteAnimation';
 import { anomalyDetectionService } from '../../services/anomalyDetectionService';
 import type { Anomaly } from '../../services/anomalyDetectionService';
 
@@ -26,6 +27,11 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   
   // 使用点位删除 Hook
   const { handleDelete: deletePointById } = usePointDelete(currentFileId);
+  
+  // 使用删除动画 Hook
+  const { deletingIds, handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
+    type: 'scaleOut',
+  });
 
   const currentPoints = useMemo(
     () => (currentFileId ? points.get(currentFileId) || [] : []),
@@ -82,7 +88,10 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
 
   // 删除点位
   const handleDelete = async (anomaly: Anomaly) => {
-    await deletePointById(anomaly.pointId, anomaly.pointNumber);
+    const anomalyKey = `${anomaly.pointId}-${anomaly.type}`;
+    await handleDeleteWithAnimation(anomalyKey, async () => {
+      await deletePointById(anomaly.pointId, anomaly.pointNumber);
+    });
   };
 
   // 获取严重程度颜色
@@ -114,8 +123,18 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   };
 
   // 渲染单个异常项
-  const renderAnomalyItem = (anomaly: Anomaly) => (
-    <Card size="small" styles={{ body: { padding: '12px' } }} style={{ marginBottom: 12 }}>
+  const renderAnomalyItem = (anomaly: Anomaly) => {
+    const anomalyKey = `${anomaly.pointId}-${anomaly.type}`;
+    
+    return (
+      <Card 
+        size="small" 
+        styles={{ body: { padding: '12px' } }} 
+        style={{ 
+          marginBottom: 12,
+          ...getAnimationStyle(anomalyKey),
+        }}
+      >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ fontSize: 20, marginTop: 2 }}>
           {getTypeIcon(anomaly.type)}
@@ -170,7 +189,7 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
             <Popconfirm
               title="确认删除"
               description={`确定要删除点 ${anomaly.pointNumber} 吗？`}
-              onConfirm={() => handleDelete(anomaly)}
+              onConfirm={() => { handleDelete(anomaly); }}
               okText="删除"
               cancelText="取消"
               okButtonProps={{ danger: true }}
@@ -186,7 +205,8 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
         </div>
       </div>
     </Card>
-  );
+    );
+  };
 
   if (!currentFileId) {
     return (

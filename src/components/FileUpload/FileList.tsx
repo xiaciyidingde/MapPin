@@ -8,6 +8,7 @@ import { useMapStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
 import { useFileSwitch } from '../../hooks/useFileSwitch';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { useDeleteAnimation } from '../../hooks/useDeleteAnimation';
 import type { MeasurementFile, ProjectionConfig } from '../../types';
 
 interface FileListProps {
@@ -34,6 +35,11 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   const [creating, setCreating] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [pendingFileName, setPendingFileName] = useState('');
+  
+  // 使用删除动画 Hook
+  const { handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
+    type: 'slideOut',
+  });
 
   const handleFileClick = (fileId: string) => {
     switchToFile(fileId, {
@@ -42,11 +48,13 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   };
 
   const handleDelete = async (fileId: string) => {
-    await deleteFile(fileId);
-    message.success('文件已移至回收站');
-    if (currentFileId === fileId) {
-      setCurrentFileId(null);
-    }
+    await handleDeleteWithAnimation(fileId, async () => {
+      await deleteFile(fileId);
+      message.success('文件已移至回收站');
+      if (currentFileId === fileId) {
+        setCurrentFileId(null);
+      }
+    });
   };
 
   // 创建新文件 - 验证文件名并打开配置窗口
@@ -186,6 +194,7 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
               currentFileId === file.id ? 'border-blue-500 bg-blue-50' : ''
             }`}
             onClick={() => handleFileClick(file.id)}
+            style={getAnimationStyle(file.id)}
           >
             <Flex justify="space-between" align="start">
               <Flex gap={12} align="start" style={{ flex: 1, minWidth: 0 }}>

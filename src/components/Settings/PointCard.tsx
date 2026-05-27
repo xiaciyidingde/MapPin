@@ -6,6 +6,7 @@ import type { MeasurementPoint } from '../../types';
 interface PointCardProps {
   point: MeasurementPoint;
   isSelected: boolean;
+  isDeleting?: boolean;
   onToggleSelect: (pointId: string) => void;
   onToggleType: (point: MeasurementPoint) => void;
   onOpenRename: (point: MeasurementPoint) => void;
@@ -16,6 +17,7 @@ interface PointCardProps {
 export const PointCard = memo(function PointCard({
   point,
   isSelected,
+  isDeleting = false,
   onToggleSelect,
   onToggleType,
   onOpenRename,
@@ -51,7 +53,12 @@ export const PointCard = memo(function PointCard({
   return (
     <Card
       size="small"
-      style={{ width: '100%' }}
+      style={{ 
+        width: '100%',
+        transform: isDeleting ? 'scale(0.8)' : 'scale(1)',
+        opacity: isDeleting ? 0 : 1,
+        transition: 'all 0.2s ease-out',
+      }}
       styles={{ body: { padding: '12px' } }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
