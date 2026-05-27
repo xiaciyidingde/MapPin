@@ -24,13 +24,20 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   const isolatedPointRangeMultiplier = useSettingsStore((state) => state.isolatedPointRangeMultiplier);
 
   const [ignoredAnomalies, setIgnoredAnomalies] = useState<Set<string>>(new Set());
+  const [animatingIgnoreIds, setAnimatingIgnoreIds] = useState<Set<string>>(new Set());
   
   // 使用点位删除 Hook
   const { handleDelete: deletePointById } = usePointDelete(currentFileId);
   
   // 使用删除动画 Hook
-  const { handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
+  const { handleDelete: handleDeleteWithAnimation, getAnimationStyle: getDeleteAnimationStyle } = useDeleteAnimation({
     type: 'scaleOut',
+  });
+  
+  // 使用忽略动画 Hook（延迟200ms后再移除）
+  const { handleDelete: handleIgnoreWithAnimation, getAnimationStyle: getIgnoreAnimationStyle } = useDeleteAnimation({
+    type: 'scaleOut',
+    delay: 200,
   });
 
   const currentPoints = useMemo(
@@ -50,9 +57,12 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
     });
   }, [isActive, currentPoints, hrmsThreshold, vrmsThreshold, duplicateCoordinateTolerance, isolatedPointRangeMultiplier]);
 
-  // 过滤掉已忽略的异常
+  // 过滤掉已忽略的异常（但保留正在动画的项）
   const activeAnomalies = anomalies.filter(
-    (a) => !ignoredAnomalies.has(`${a.pointId}-${a.type}`)
+    (a) => {
+      const key = `${a.pointId}-${a.type}`;
+      return !ignoredAnomalies.has(key) || animatingIgnoreIds.has(key);
+    }
   );
 
   // 按类型分组
@@ -82,8 +92,21 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   };
 
   // 忽略异常
-  const handleIgnore = (anomaly: Anomaly) => {
-    setIgnoredAnomalies((prev) => new Set(prev).add(`${anomaly.pointId}-${anomaly.type}`));
+  const handleIgnore = async (anomaly: Anomaly) => {
+    const anomalyKey = `${anomaly.pointId}-${anomaly.type}`;
+    
+    // 标记为正在动画
+    setAnimatingIgnoreIds((prev) => new Set(prev).add(anomalyKey));
+    
+    await handleIgnoreWithAnimation(anomalyKey, async () => {
+      // 动画完成后，添加到忽略列表并移除动画标记
+      setIgnoredAnomalies((prev) => new Set(prev).add(anomalyKey));
+      setAnimatingIgnoreIds((prev) => {
+        const next = new Set(prev);
+        next.delete(anomalyKey);
+        return next;
+      });
+    });
   };
 
   // 删除点位
@@ -126,13 +149,22 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   const renderAnomalyItem = (anomaly: Anomaly) => {
     const anomalyKey = `${anomaly.pointId}-${anomaly.type}`;
     
+    // 合并删除和忽略的动画样式
+    const deleteStyle = getDeleteAnimationStyle(anomalyKey);
+    const ignoreStyle = getIgnoreAnimationStyle(anomalyKey);
+    
+    // 如果任一动画激活，使用该动画样式
+    const animationStyle = deleteStyle.opacity === 0 ? deleteStyle : 
+                          ignoreStyle.opacity === 0 ? ignoreStyle : 
+                          {};
+    
     return (
       <Card 
         size="small" 
         styles={{ body: { padding: '12px' } }} 
         style={{ 
           marginBottom: 12,
-          ...getAnimationStyle(anomalyKey),
+          ...animationStyle,
         }}
       >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
