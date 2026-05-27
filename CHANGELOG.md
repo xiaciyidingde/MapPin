@@ -1,5 +1,17 @@
 # 更新日志
 
+## [v1.2.5.1] - 2026-05-27
+
+### 问题修复
+- 修复 ESLint 错误
+  - 修复 `ZipBatchImportModal` 在 effect 中调用 setState 导致级联渲染的问题
+  - 修复 `FitViewControl` 在渲染期间访问 ref 的问题
+  - 修复 `AnomalyDetection` 未使用的 `deletingIds` 变量
+- 修复 TypeScript 编译错误
+  - 修复 `useScrollToElement` 中 ref 类型定义问题
+
+---
+
 ## [v1.2.5.0] - 2026-05-27
 
 ### 新增功能

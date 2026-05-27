@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Checkbox, Button, Flex, Tag, Typography, App, Form, Select, InputNumber, Space, theme } from 'antd';
 import { FileTextOutlined, AimOutlined } from '@ant-design/icons';
 import { MultiStepModal } from '../common/MultiStepModal';
@@ -30,11 +30,11 @@ export function ZipBatchImportModal({
 }: ZipBatchImportModalProps) {
   const { message } = App.useApp();
   const { token } = theme.useToken();
-  const [currentStep, setCurrentStep] = useState(0);
   
   // 文件选择
   const initialSelectedFiles = useMemo(() => files.map(f => f.name), [files]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>(initialSelectedFiles);
+  const [currentStep, setCurrentStep] = useState(0);
   
   // 投影配置
   const [coordinateSystem, setCoordinateSystem] = useState<CoordinateSystem>('CGCS2000');
@@ -43,14 +43,6 @@ export function ZipBatchImportModal({
   const [gettingLocation, setGettingLocation] = useState(false);
   const userLocation = useMapStore((state) => state.userLocation);
   const locationPermissionDenied = useMapStore((state) => state.locationPermissionDenied);
-
-  // 当 modal 打开时重置状态
-  useEffect(() => {
-    if (open) {
-      setSelectedFiles(initialSelectedFiles);
-      setCurrentStep(0);
-    }
-  }, [open, initialSelectedFiles]);
 
   // 步骤定义
   const steps = [

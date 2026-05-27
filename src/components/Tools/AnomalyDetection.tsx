@@ -29,7 +29,7 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   const { handleDelete: deletePointById } = usePointDelete(currentFileId);
   
   // 使用删除动画 Hook
-  const { deletingIds, handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
+  const { handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
     type: 'scaleOut',
   });
 
