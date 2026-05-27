@@ -6,7 +6,6 @@ import type {
   CoordinateSystem,
   ProjectionConfig,
 } from '../types';
-import { identifyPointType } from '../utils/pointType';
 import { isValidCoordinate, sanitizePointNumber, isValidCoordinateString } from '../utils/sanitize';
 import { appConfig } from '../config/appConfig';
 
@@ -209,7 +208,7 @@ export class DatFileParser implements IFileParser {
           x,
           y,
           z,
-          type: identifyPointType(pointNumber),
+          type: 'survey',
           order: points.length, // 使用当前数组长度作为顺序号
           qualityParams: Object.keys(qualityParams).length > 0 ? qualityParams : undefined,
         };

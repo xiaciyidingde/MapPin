@@ -25,7 +25,7 @@ interface RecycleBinGroup {
 }
 
 export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { loadRecycleBin, restoreFromRecycleBin, deleteFromRecycleBin, clearRecycleBin } = useDataStore();
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<RecycleBinGroup[]>([]);
@@ -108,7 +108,7 @@ export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
       
       if (conflicts.length > 0) {
         // 显示冲突预警
-        Modal.confirm({
+        modal.confirm({
           title: `准备恢复 ${itemIds.length} 个项目`,
           icon: <ExclamationCircleOutlined />,
           content: (
@@ -192,7 +192,7 @@ export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
 
   // 永久删除
   const handleDelete = async (itemId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: '确认永久删除',
       content: '此操作无法恢复，确定要永久删除吗？',
       okText: '确认删除',
@@ -213,7 +213,7 @@ export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
 
   // 清空回收站
   const handleClear = () => {
-    Modal.confirm({
+    modal.confirm({
       title: '确认清空回收站',
       content: '此操作将永久删除回收站中的所有项目，无法恢复。确定要继续吗？',
       okText: '确认清空',
@@ -391,7 +391,7 @@ export function RecycleBinDrawer({ open, onClose }: RecycleBinDrawerProps) {
                               danger
                               icon={<DeleteOutlined />}
                               onClick={() => {
-                                Modal.confirm({
+                                modal.confirm({
                                   title: '确认删除全部点位',
                                   content: `此操作将永久删除该文件下的 ${group.deletedPoints.length} 个点位，无法恢复。确定要继续吗？`,
                                   okText: '确认删除',

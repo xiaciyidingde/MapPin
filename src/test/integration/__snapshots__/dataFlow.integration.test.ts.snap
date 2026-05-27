@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`数据流集成测试 > 阶段 9: 完善的导出测试 > 应该生成正确的快照格式 1`] = `
+"1,,300,500,30
+2,,400,600,35
+3,,700,100,80"
+`;

@@ -1,15 +1,17 @@
-import { Modal, Checkbox, Input, Radio, Space, Alert, Typography, Flex, Steps, Button, Spin, Table, Popover, message, theme } from 'antd';
-import { useState, useMemo, useEffect } from 'react';
+import { Checkbox, Input, Radio, Space, Alert, Typography, Flex, Button, Spin, Table, Popover, message, theme } from 'antd';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { MultiStepModal } from '../common/MultiStepModal';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
 import { dataService } from '../../services/dataService';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { useFileSwitch } from '../../hooks/useFileSwitch';
+import { useScrollToElement } from '../../hooks/useScrollToElement';
 import { isValidPointNumber } from '../../utils/sanitize';
+import { loadAndGetMultiplePoints } from '../../utils/dataUtils';
 import type { MeasurementFile, MeasurementPoint } from '../../types/measurement';
 import dayjs from 'dayjs';
-
-const { confirm } = Modal;
 
 const { Text } = Typography;
 
@@ -35,8 +37,9 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
   const { token } = theme.useToken();
   const { files, loadPoints, loadFiles } = useDataStore();
   const currentFileId = useMapStore((state) => state.currentFileId);
-  const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
-  const triggerFitToView = useMapStore((state) => state.triggerFitToView);
+  
+  // 使用文件切换 Hook
+  const { switchToFile } = useFileSwitch();
   
   // 使用文件名验证 Hook
   const { validateFileName } = useFileNameValidation();
@@ -54,6 +57,14 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
   const [conflicts, setConflicts] = useState<ConflictPoint[]>([]);
   const [batchRenamePopoverOpen, setBatchRenamePopoverOpen] = useState(false);
   const [conflictsDetected, setConflictsDetected] = useState(false); // 标记是否已检测过冲突点
+
+  // 使用滚动 Hook
+  const { containerRef, getTargetRef } = useScrollToElement({
+    targetKeys: currentFileId ? [currentFileId] : [],
+    enabled: open,
+    delay: 500,
+    block: 'center',
+  });
 
   // 每次打开时重置状态
   useEffect(() => {
@@ -86,13 +97,12 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
     setLoadingConflicts(true);
     try {
       // 加载两个文件的点位数据
-      await loadPoints(selectedFileIds[0]);
-      await loadPoints(selectedFileIds[1]);
-
-      // 获取点位数据
-      const points = useDataStore.getState().points;
-      const file1Points = points.get(selectedFileIds[0]) || [];
-      const file2Points = points.get(selectedFileIds[1]) || [];
+      const pointsMap = await loadAndGetMultiplePoints(
+        [selectedFileIds[0], selectedFileIds[1]], 
+        loadPoints
+      );
+      const file1Points = pointsMap.get(selectedFileIds[0]) || [];
+      const file2Points = pointsMap.get(selectedFileIds[1]) || [];
 
       // 查找冲突点（点号相同点）
       const conflictMap = new Map<string, ConflictPoint>();
@@ -133,7 +143,7 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
   };
 
   // 更新文件1的点名
-  const updateFile1Name = (pointNumber: string, newName: string) => {
+  const updateFile1Name = useCallback((pointNumber: string, newName: string) => {
     // 验证点号格式
     if (newName && !isValidPointNumber(newName)) {
       message.warning('点号格式不正确，只允许字母、数字、中文、下划线和连字符');
@@ -153,10 +163,10 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
         return c;
       })
     );
-  };
+  }, []);
 
   // 更新文件2的点名
-  const updateFile2Name = (pointNumber: string, newName: string) => {
+  const updateFile2Name = useCallback((pointNumber: string, newName: string) => {
     // 验证点号格式
     if (newName && !isValidPointNumber(newName)) {
       message.warning('点号格式不正确，只允许字母、数字、中文、下划线和连字符');
@@ -176,7 +186,7 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
         return c;
       })
     );
-  };
+  }, []);
 
   // 批量重命名文件2的冲突点
   const handleBatchRename = () => {
@@ -250,13 +260,12 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
     setMerging(true);
     try {
       // 加载两个文件的点位数据
-      await loadPoints(selectedFileIds[0]);
-      await loadPoints(selectedFileIds[1]);
-
-      // 获取点位数据
-      const points = useDataStore.getState().points;
-      const file1Points = points.get(selectedFileIds[0]) || [];
-      const file2Points = points.get(selectedFileIds[1]) || [];
+      const pointsMap = await loadAndGetMultiplePoints(
+        [selectedFileIds[0], selectedFileIds[1]], 
+        loadPoints
+      );
+      const file1Points = pointsMap.get(selectedFileIds[0]) || [];
+      const file2Points = pointsMap.get(selectedFileIds[1]) || [];
 
       // 合并点位（保持原顺序）
       const mergedPoints: MeasurementPoint[] = [];
@@ -361,7 +370,7 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
       onSuccess?.();
       
       // 合并成功后打开新文件
-      openMergedFile(newFileId);
+      openMergedFile(newFileId, newFile.name);
     } catch (error) {
       console.error('合并失败:', error);
       message.error('合并失败：' + (error instanceof Error ? error.message : '未知错误'));
@@ -371,28 +380,11 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
   };
 
   // 打开合并后的文件
-  const openMergedFile = (newFileId: string) => {
-    if (currentFileId) {
-      // 如果已有文件打开，询问用户是否切换
-      confirm({
-        title: '打开合并后的文件',
-        content: '当前已有文件打开，是否切换到新合并的文件？',
-        okText: '切换',
-        cancelText: '取消',
-        onOk: () => {
-          setCurrentFileId(newFileId);
-          setTimeout(() => {
-            triggerFitToView();
-          }, 100);
-        },
-      });
-    } else {
-      // 没有文件打开，直接打开新文件
-      setCurrentFileId(newFileId);
-      setTimeout(() => {
-        triggerFitToView();
-      }, 100);
-    }
+  const openMergedFile = (newFileId: string, fileName: string) => {
+    switchToFile(newFileId, { 
+      confirm: true,
+      confirmContent: `当前已打开文件「${files.find(f => f.id === currentFileId)?.name || '未知文件'}」，是否切换到「${fileName}」？`,
+    });
   };
 
   // 重置状态
@@ -424,29 +416,25 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
   };
 
   return (
-    <Modal
-      title="文件合并"
+    <MultiStepModal
       open={open}
+      title="文件合并"
+      currentStep={currentStep}
+      steps={steps}
       onCancel={handleCancel}
-      width="90%"
-      style={{ maxWidth: 680 }}
-      footer={null}
-      destroyOnHidden
+      onPrev={handlePrev}
+      onNext={handleNext}
+      onFinish={handleMerge}
+      nextButtonDisabled={!canNext()}
+      finishButtonDisabled={selectedFileIds.length < 2 || !mergedFileName.trim()}
+      finishButtonText="合并"
+      loading={merging}
+      width={680}
     >
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        {/* 步骤指示器 */}
-        <Steps
-          current={currentStep}
-          items={steps}
-          style={{ marginTop: 16 }}
-          size="small"
-          responsive={false}
-        />
-
-        {/* 步骤内容 */}
-        <div style={{ minHeight: 320 }}>
-          {/* 步骤 1: 选择文件 */}
-          {currentStep === 0 && (
+      {/* 步骤内容 */}
+      <div style={{ minHeight: 320 }}>
+        {/* 步骤 1: 选择文件 */}
+        {currentStep === 0 && (
             <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
               <Flex justify="space-between" align="center">
                 <Text strong>文件列表（最多选择2个）</Text>
@@ -476,6 +464,7 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
               </Flex>
               
               <div
+                ref={containerRef}
                 style={{
                   maxHeight: 280,
                   overflowY: 'auto',
@@ -489,6 +478,7 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
                   {files.map(file => (
                     <div
                       key={file.id}
+                      ref={getTargetRef(file.id)}
                       style={{
                         padding: '8px 12px',
                         backgroundColor: selectedFileIds.includes(file.id) ? token.colorPrimaryBg : token.colorBgContainer,
@@ -781,36 +771,8 @@ export function FileMergeModal({ open, onClose, onSuccess }: FileMergeModalProps
             </Space>
           )}
         </div>
+      </MultiStepModal>
+    );
+  }
 
-        {/* 底部按钮 */}
-        <Flex justify="space-between" style={{ marginTop: 8 }}>
-          <Button onClick={handleCancel} disabled={merging}>
-            取消
-          </Button>
-          <Space>
-            {currentStep > 0 && (
-              <Button onClick={handlePrev} disabled={merging}>
-                上一步
-              </Button>
-            )}
-            {currentStep < 2 ? (
-              <Button type="primary" onClick={handleNext} disabled={!canNext()}>
-                下一步
-              </Button>
-            ) : (
-              <Button
-                type="primary"
-                onClick={handleMerge}
-                loading={merging}
-                disabled={selectedFileIds.length < 2 || !mergedFileName.trim()}
-              >
-                合并
-              </Button>
-            )}
-          </Space>
-        </Flex>
-      </Space>
-    </Modal>
-  );
-}
 

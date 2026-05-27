@@ -1,4 +1,4 @@
-import { useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { useEffect, useState, useImperativeHandle, forwardRef, useCallback, useRef } from 'react';
 import { Polyline, Tooltip } from 'react-leaflet';
 import { App } from 'antd';
 import type { MeasurementPoint } from '../../types';
@@ -26,29 +26,56 @@ export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
   ({ active, onSelectedPointsChange }, ref) => {
     const { message } = App.useApp();
     const [selectedPoints, setSelectedPoints] = useState<MeasurementPoint[]>([]);
+    const lastMessageRef = useRef<string>('');
 
     // 处理点击选择
     const handlePointSelect = useCallback((point: MeasurementPoint) => {
       if (!active) return;
       
       setSelectedPoints(prev => {
-        if (prev.length === 0) {
-          message.info('已选择起点，请选择终点');
-          return [point];
-        } else if (prev.length === 1) {
-          const isClickingSamePoint = prev[0].id === point.id;
-          if (!isClickingSamePoint) {
-            message.success('测量完成');
-            return [prev[0], point];
+        let messageType: 'start' | 'complete' | 'same' | 'restart' | null = null;
+        
+        const newPoints = (() => {
+          if (prev.length === 0) {
+            messageType = 'start';
+            return [point];
+          } else if (prev.length === 1) {
+            const isClickingSamePoint = prev[0].id === point.id;
+            if (!isClickingSamePoint) {
+              messageType = 'complete';
+              return [prev[0], point];
+            } else {
+              messageType = 'same';
+              return prev;
+            }
           } else {
-            message.warning('请选择不同的点');
-            return prev;
+            // 已有两个点，重新开始
+            messageType = 'restart';
+            return [point];
           }
-        } else {
-          // 已有两个点，重新开始
-          message.info('已选择起点，请选择终点');
-          return [point];
-        }
+        })();
+        
+        // 使用 setTimeout 将 message 调用移出渲染周期，并使用 ref 防止重复显示
+        setTimeout(() => {
+          const messageKey = `${messageType}-${newPoints.map(p => p.id).join('-')}`;
+          
+          // 如果这个消息已经显示过，跳过
+          if (lastMessageRef.current === messageKey) {
+            return;
+          }
+          
+          lastMessageRef.current = messageKey;
+          
+          if (messageType === 'start' || messageType === 'restart') {
+            message.info('已选择起点，请选择终点');
+          } else if (messageType === 'complete') {
+            message.success('测量完成');
+          } else if (messageType === 'same') {
+            message.warning('请选择不同的点');
+          }
+        }, 0);
+        
+        return newPoints;
       });
     }, [active, message]);
 
@@ -62,6 +89,7 @@ export const MeasureTool = forwardRef<MeasureToolRef, MeasureToolProps>(
   useEffect(() => {
     if (!active) {
       setSelectedPoints([]);
+      lastMessageRef.current = ''; // 重置消息记录
     }
   }, [active]);
   

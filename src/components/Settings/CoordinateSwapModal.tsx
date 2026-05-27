@@ -1,8 +1,9 @@
-import { Modal, Card, Checkbox, Flex, Empty, App } from 'antd';
+import { Modal, Card, Checkbox, Flex, Empty, App, theme } from 'antd';
 import { useState, useEffect } from 'react';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
-import { coordinateConverter } from '../../services/coordinateConverter';
+import { loadAndGetPoints } from '../../utils/dataUtils';
+import { convertCoordinatesToWGS84ForFile } from '../../utils/coordinateUtils';
 import type { MeasurementPoint } from '../../types/measurement';
 
 interface CoordinateSwapModalProps {
@@ -13,6 +14,7 @@ interface CoordinateSwapModalProps {
 
 export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwapModalProps) {
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const { files, loadPoints } = useDataStore();
   const [selectedPoints, setSelectedPoints] = useState<Set<string>>(new Set());
@@ -32,9 +34,7 @@ export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwap
     const loadData = async () => {
       setLoading(true);
       try {
-        await loadPoints(currentFileId);
-        // 直接从 store 获取最新数据
-        const filePoints = useDataStore.getState().points.get(currentFileId) || [];
+        const filePoints = await loadAndGetPoints(currentFileId, loadPoints);
         setPoints(filePoints);
         // 默认全选
         setSelectedPoints(new Set(filePoints.map(p => p.id)));
@@ -83,7 +83,7 @@ export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwap
 
     setSwapping(true);
     try {
-      const { batchUpdatePoints, loadPoints: reloadPoints } = useDataStore.getState();
+      const { batchUpdatePoints } = useDataStore.getState();
       
       // 准备批量更新数据
       const updates = points
@@ -94,13 +94,7 @@ export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwap
           const newY = point.x;
           
           // 重新计算经纬度
-          const { lat, lng } = coordinateConverter.projectToWGS84(
-            newX,
-            newY,
-            currentFile.projectionConfig.coordinateSystem,
-            currentFile.projectionConfig.projectionType,
-            currentFile.projectionConfig.centralMeridian
-          );
+          const { lat, lng } = convertCoordinatesToWGS84ForFile(newX, newY, currentFile);
           
           return {
             pointId: point.id,
@@ -117,7 +111,7 @@ export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwap
       await batchUpdatePoints(currentFileId, updates);
       
       // 重新加载点位数据以确保主界面更新
-      await reloadPoints(currentFileId);
+      await loadAndGetPoints(currentFileId, loadPoints);
       
       message.success(`已成功反转 ${updates.length} 个点位的坐标`);
       
@@ -158,15 +152,15 @@ export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwap
       ) : (
         <Flex vertical gap={12}>
           {/* 文件名显示 */}
-          <Card size="small" style={{ backgroundColor: '#fafafa' }}>
+          <Card size="small" style={{ backgroundColor: token.colorBgContainer, borderColor: token.colorBorder }}>
             <Flex align="center" gap={8}>
-              <span style={{ color: '#666' }}>当前文件：</span>
-              <span style={{ fontWeight: 'bold' }}>{currentFile?.name}</span>
+              <span style={{ color: token.colorTextSecondary }}>当前文件：</span>
+              <span style={{ fontWeight: 'bold', color: token.colorText }}>{currentFile?.name}</span>
             </Flex>
           </Card>
 
           {/* 全选控制 */}
-          <Card size="small" style={{ backgroundColor: '#f5f5f5' }}>
+          <Card size="small" style={{ backgroundColor: token.colorBgContainer, borderColor: token.colorBorder }}>
             <Flex justify="space-between" align="center">
               <Checkbox
                 checked={selectedPoints.size === points.length}
@@ -177,49 +171,52 @@ export function CoordinateSwapModal({ open, onClose, onSuccess }: CoordinateSwap
                   全选 ({selectedPoints.size}/{points.length})
                 </span>
               </Checkbox>
-              <span style={{ fontSize: 12, color: '#666' }}>
+              <span style={{ fontSize: 12, color: token.colorTextSecondary }}>
                 选中的点位将交换 X 和 Y 坐标
               </span>
             </Flex>
           </Card>
 
           {/* 点位列表 */}
-          {points.map((point) => (
-            <Card
-              key={point.id}
-              size="small"
-              hoverable
-              onClick={() => handleTogglePoint(point.id)}
-              style={{
-                cursor: 'pointer',
-                borderColor: selectedPoints.has(point.id) ? '#1890ff' : undefined,
-                backgroundColor: selectedPoints.has(point.id) ? '#e6f7ff' : undefined,
-              }}
-            >
-              <Flex gap={12} align="center">
-                <Checkbox
-                  checked={selectedPoints.has(point.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={() => handleTogglePoint(point.id)}
-                />
-                <Flex vertical style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 'bold', fontSize: 14 }}>
-                    {point.pointNumber}
-                    {point.code && (
-                      <span style={{ marginLeft: 8, color: '#666', fontWeight: 'normal' }}>
-                        ({point.code})
-                      </span>
-                    )}
-                  </div>
-                  <Flex gap={16} style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                    <span>X: {point.x.toFixed(3)}</span>
-                    <span>Y: {point.y.toFixed(3)}</span>
-                    <span>Z: {point.z.toFixed(3)}</span>
+          {points.map((point) => {
+            const isSelected = selectedPoints.has(point.id);
+            return (
+              <Card
+                key={point.id}
+                size="small"
+                hoverable
+                onClick={() => handleTogglePoint(point.id)}
+                style={{
+                  cursor: 'pointer',
+                  borderColor: isSelected ? token.colorPrimary : token.colorBorder,
+                  backgroundColor: isSelected ? token.colorPrimaryBg : token.colorBgContainer,
+                }}
+              >
+                <Flex gap={12} align="center">
+                  <Checkbox
+                    checked={isSelected}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => handleTogglePoint(point.id)}
+                  />
+                  <Flex vertical style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 'bold', fontSize: 14, color: token.colorText }}>
+                      {point.pointNumber}
+                      {point.code && (
+                        <span style={{ marginLeft: 8, color: token.colorTextSecondary, fontWeight: 'normal' }}>
+                          ({point.code})
+                        </span>
+                      )}
+                    </div>
+                    <Flex gap={16} style={{ fontSize: 12, color: token.colorTextSecondary, marginTop: 4 }}>
+                      <span>X: {point.x.toFixed(3)}</span>
+                      <span>Y: {point.y.toFixed(3)}</span>
+                      <span>Z: {point.z.toFixed(3)}</span>
+                    </Flex>
                   </Flex>
                 </Flex>
-              </Flex>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </Flex>
       )}
     </Modal>

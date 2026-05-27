@@ -6,7 +6,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { useDataStore } from '../../store';
 import { useMapStore } from '../../store';
 import { ProjectionConfigModal } from './ProjectionConfigModal';
+import { useFileSwitch } from '../../hooks/useFileSwitch';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { useDeleteAnimation } from '../../hooks/useDeleteAnimation';
 import type { MeasurementFile, ProjectionConfig } from '../../types';
 
 interface FileListProps {
@@ -22,7 +24,9 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   const addFile = useDataStore((state) => state.addFile);
   const currentFileId = useMapStore((state) => state.currentFileId);
   const setCurrentFileId = useMapStore((state) => state.setCurrentFileId);
-  const triggerFitToView = useMapStore((state) => state.triggerFitToView);
+  
+  // 使用文件切换 Hook
+  const { switchToFile } = useFileSwitch();
   
   // 使用文件名验证 Hook
   const { validateFileName } = useFileNameValidation();
@@ -31,23 +35,26 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
   const [creating, setCreating] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [pendingFileName, setPendingFileName] = useState('');
+  
+  // 使用删除动画 Hook
+  const { handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
+    type: 'slideOut',
+  });
 
   const handleFileClick = (fileId: string) => {
-    setCurrentFileId(fileId);
-    // 延迟触发 Fit to View
-    setTimeout(() => {
-      triggerFitToView();
-    }, 100);
-    // 通知父组件文件已被选中
-    onFileSelect?.();
+    switchToFile(fileId, {
+      onConfirm: () => onFileSelect?.()
+    });
   };
 
   const handleDelete = async (fileId: string) => {
-    await deleteFile(fileId);
-    message.success('文件已移至回收站');
-    if (currentFileId === fileId) {
-      setCurrentFileId(null);
-    }
+    await handleDeleteWithAnimation(fileId, async () => {
+      await deleteFile(fileId);
+      message.success('文件已移至回收站');
+      if (currentFileId === fileId) {
+        setCurrentFileId(null);
+      }
+    });
   };
 
   // 创建新文件 - 验证文件名并打开配置窗口
@@ -98,15 +105,14 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
       // 添加文件
       await addFile(newFile, []);
       
-      // 自动打开新创建的文件
-      setCurrentFileId(newFile.id);
+      // 自动打开新创建的文件（空文件不需要 fitToView）
+      switchToFile(newFile.id, {
+        onConfirm: () => onFileSelect?.()
+      });
       
       message.success(`已创建文件 "${fileNameWithExt}"`);
       setNewFileName('');
       setPendingFileName('');
-      
-      // 通知父组件文件已被选中
-      onFileSelect?.();
     } catch (error) {
       console.error('创建文件失败:', error);
       message.error('创建文件失败');
@@ -188,6 +194,7 @@ export function FileList({ onOpenSettings, onFileSelect }: FileListProps) {
               currentFileId === file.id ? 'border-blue-500 bg-blue-50' : ''
             }`}
             onClick={() => handleFileClick(file.id)}
+            style={getAnimationStyle(file.id)}
           >
             <Flex justify="space-between" align="start">
               <Flex gap={12} align="start" style={{ flex: 1, minWidth: 0 }}>

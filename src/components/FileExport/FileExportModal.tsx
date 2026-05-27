@@ -1,12 +1,13 @@
 import { Modal, Checkbox, Input, Radio, Space, Alert, Typography, Flex, Steps, Button, Card, theme, App } from 'antd';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDataStore } from '../../store/useDataStore';
 import { useMapStore } from '../../store/useMapStore';
 import { exportFile, exportMultipleFiles, type ExportOptions } from '../../services/exportService';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
+import { useScrollToElement } from '../../hooks/useScrollToElement';
+import { loadAndGetPoints } from '../../utils/dataUtils';
+import { generateDefaultFileName } from '../../utils/fileUtils';
 import type { MeasurementFile, MeasurementPoint } from '../../types/measurement';
-import dayjs from 'dayjs';
-
 const { Text } = Typography;
 
 interface FileExportModalProps {
@@ -28,10 +29,13 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [exporting, setExporting] = useState(false);
   
-  // 文件列表容器的 ref
-  const fileListRef = useRef<HTMLDivElement>(null);
-  const currentFileRef = useRef<HTMLDivElement>(null);
-  const hasScrolledRef = useRef(false); // 标记是否已滚动
+  // 使用滚动 Hook
+  const { containerRef, getTargetRef } = useScrollToElement({
+    targetKeys: currentFileId ? [currentFileId] : [],
+    enabled: open,
+    delay: 500,
+    block: 'center',
+  });
   
   // 导出配置
   const [exportConfig, setExportConfig] = useState({
@@ -61,53 +65,11 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
           swapXY: false,
         });
         
-        // 重置滚动标记
-        hasScrolledRef.current = false;
-        
         // 设置默认文件名
-        if (currentFileId) {
-          const currentFile = files.find(f => f.id === currentFileId);
-          if (currentFile) {
-            setExportFileName(currentFile.name.replace(/\.dat$/i, ''));
-          }
-        } else {
-          setExportFileName(`导出文件_${dayjs().format('YYYYMMDD')}`);
-        }
+        setExportFileName(generateDefaultFileName(currentFileId, files));
       });
     }
   }, [open, currentFileId, files]);
-
-  // 自动滚动到当前文件（只在打开时执行一次）
-  useEffect(() => {
-    if (open && currentFileId && !hasScrolledRef.current) {
-      // 使用 requestAnimationFrame 等待浏览器渲染完成
-      const rafId = requestAnimationFrame(() => {
-        // 延迟执行，确保 DOM 已渲染和模态框动画完成
-        const timer = setTimeout(() => {
-          if (currentFileRef.current && fileListRef.current && !hasScrolledRef.current) {
-            const container = fileListRef.current;
-            const element = currentFileRef.current;
-            
-            // 计算需要滚动的距离（让元素显示在容器中央）
-            const scrollTop = element.offsetTop - container.offsetTop - (container.clientHeight / 2) + (element.clientHeight / 2);
-            
-            // 平滑滚动
-            container.scrollTo({
-              top: scrollTop,
-              behavior: 'smooth',
-            });
-            
-            // 标记已滚动
-            hasScrolledRef.current = true;
-          }
-        }, 500);
-        
-        return () => clearTimeout(timer);
-      });
-      
-      return () => cancelAnimationFrame(rafId);
-    }
-  }, [open, currentFileId]);
 
   // 获取选中的文件信息 - 使用 Map 优化查找性能
   const selectedFiles = useMemo(() => {
@@ -149,14 +111,8 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
     if (currentStep < 2) {
       // 如果从步骤1进入步骤2，更新文件名
       if (currentStep === 0) {
-        if (selectedFileIds.length === 1) {
-          const file = files.find(f => f.id === selectedFileIds[0]);
-          if (file) {
-            setExportFileName(file.name.replace(/\.dat$/i, ''));
-          }
-        } else {
-          setExportFileName(`导出文件_${dayjs().format('YYYYMMDD')}`);
-        }
+        const fileId = selectedFileIds.length === 1 ? selectedFileIds[0] : null;
+        setExportFileName(generateDefaultFileName(fileId, files));
       }
       setCurrentStep(currentStep + 1);
     }
@@ -201,8 +157,7 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
         }
 
         // 加载点位数据
-        await loadPoints(fileId);
-        const points = useDataStore.getState().points.get(fileId) || [];
+        const points = await loadAndGetPoints(fileId, loadPoints);
 
         if (points.length === 0) {
           message.warning('当前文件没有点位数据');
@@ -221,8 +176,7 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
           if (!file) continue;
 
           // 加载点位数据
-          await loadPoints(fileId);
-          const points = useDataStore.getState().points.get(fileId) || [];
+          const points = await loadAndGetPoints(fileId, loadPoints);
           
           if (points.length > 0) {
             filesWithPoints.push({ file, points });
@@ -310,7 +264,7 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
               </Flex>
               
               <div
-                ref={fileListRef}
+                ref={containerRef}
                 style={{
                   maxHeight: 280,
                   overflowY: 'auto',
@@ -329,7 +283,7 @@ export function FileExportModal({ open, onClose }: FileExportModalProps) {
                     files.map(file => (
                       <div
                         key={file.id}
-                        ref={file.id === currentFileId ? currentFileRef : null}
+                        ref={getTargetRef(file.id)}
                         style={{
                           padding: '8px 12px',
                           backgroundColor: selectedFileIds.includes(file.id) ? token.colorPrimaryBg : token.colorBgContainer,

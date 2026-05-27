@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, App, Popconfirm } from 'antd';
+import { Card, Empty, Tag, Button, Statistic, Row, Col, Collapse, Popconfirm } from 'antd';
 import { WarningOutlined, EnvironmentOutlined, CheckCircleOutlined, EyeInvisibleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Virtuoso } from 'react-virtuoso';
 import { useDataStore, useMapStore, useSettingsStore } from '../../store';
+import { usePointDelete } from '../../hooks/usePointDelete';
+import { useDeleteAnimation } from '../../hooks/useDeleteAnimation';
 import { anomalyDetectionService } from '../../services/anomalyDetectionService';
 import type { Anomaly } from '../../services/anomalyDetectionService';
 
@@ -12,10 +14,8 @@ interface AnomalyDetectionProps {
 }
 
 export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: AnomalyDetectionProps) {
-  const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
-  const deletePoint = useDataStore((state) => state.deletePoint);
   const setView = useMapStore((state) => state.setView);
   const setSelectedPointId = useMapStore((state) => state.setSelectedPointId);
   const hrmsThreshold = useSettingsStore((state) => state.hrmsThreshold);
@@ -24,6 +24,14 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   const isolatedPointRangeMultiplier = useSettingsStore((state) => state.isolatedPointRangeMultiplier);
 
   const [ignoredAnomalies, setIgnoredAnomalies] = useState<Set<string>>(new Set());
+  
+  // 使用点位删除 Hook
+  const { handleDelete: deletePointById } = usePointDelete(currentFileId);
+  
+  // 使用删除动画 Hook
+  const { deletingIds, handleDelete: handleDeleteWithAnimation, getAnimationStyle } = useDeleteAnimation({
+    type: 'scaleOut',
+  });
 
   const currentPoints = useMemo(
     () => (currentFileId ? points.get(currentFileId) || [] : []),
@@ -80,14 +88,10 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
 
   // 删除点位
   const handleDelete = async (anomaly: Anomaly) => {
-    if (!currentFileId) return;
-    
-    try {
-      await deletePoint(currentFileId, anomaly.pointId);
-      message.success(`已删除点 ${anomaly.pointNumber}`);
-    } catch {
-      message.error('删除失败');
-    }
+    const anomalyKey = `${anomaly.pointId}-${anomaly.type}`;
+    await handleDeleteWithAnimation(anomalyKey, async () => {
+      await deletePointById(anomaly.pointId, anomaly.pointNumber);
+    });
   };
 
   // 获取严重程度颜色
@@ -119,8 +123,18 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
   };
 
   // 渲染单个异常项
-  const renderAnomalyItem = (anomaly: Anomaly) => (
-    <Card size="small" styles={{ body: { padding: '12px' } }} style={{ marginBottom: 12 }}>
+  const renderAnomalyItem = (anomaly: Anomaly) => {
+    const anomalyKey = `${anomaly.pointId}-${anomaly.type}`;
+    
+    return (
+      <Card 
+        size="small" 
+        styles={{ body: { padding: '12px' } }} 
+        style={{ 
+          marginBottom: 12,
+          ...getAnimationStyle(anomalyKey),
+        }}
+      >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ fontSize: 20, marginTop: 2 }}>
           {getTypeIcon(anomaly.type)}
@@ -175,7 +189,7 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
             <Popconfirm
               title="确认删除"
               description={`确定要删除点 ${anomaly.pointNumber} 吗？`}
-              onConfirm={() => handleDelete(anomaly)}
+              onConfirm={() => { handleDelete(anomaly); }}
               okText="删除"
               cancelText="取消"
               okButtonProps={{ danger: true }}
@@ -191,7 +205,8 @@ export function AnomalyDetection({ isActive, onLocate: onLocateCallback }: Anoma
         </div>
       </div>
     </Card>
-  );
+    );
+  };
 
   if (!currentFileId) {
     return (

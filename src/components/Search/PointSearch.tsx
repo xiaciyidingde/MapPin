@@ -7,6 +7,7 @@ import { useDataStore, useMapStore, useSettingsStore } from '../../store';
 import { tiandituSearchService, type TiandituPOI, type TiandituArea, type TiandituSearchResponse } from '../../services/tiandituSearchService';
 import { formatDistance } from '../../services/measurementService';
 import type { MeasurementPoint } from '../../types';
+import { calculateHaversineDistance } from '../../utils/distanceUtils';
 
 type SearchMode = 'point' | 'place';
 
@@ -29,7 +30,7 @@ const NEARBY_CATEGORIES = new Set([
 ]);
 
 // 周边搜索意图词（预编译正则）
-const NEARBY_INTENT_REGEX = /附近|周边|周围|附近的|周边的|周围的|附近有|周边有|周围有|离我最近的|方圆/;
+const NEARBY_INTENT_REGEX = /附近|周边|周围|附近的|周边的|周围的|附近有|周边有|周围有|最近|最近的|离我最近|离我最近的|方圆/;
 
 // 搜索结果缓存
 interface SearchCache {
@@ -40,6 +41,15 @@ interface SearchCache {
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
 let searchCache: SearchCache | null = null;
+
+/**
+ * 清理周边搜索关键词（移除意图词，保留类别词）
+ */
+function cleanNearbyKeyword(query: string): string {
+  return query
+    .replace(/附近的?|周边的?|周围的?|最近的?|离我最近的?|方圆\d+[米公里kmKM]*内?的?/g, '')
+    .trim();
+}
 
 /**
  * 判断是否为周边搜索（优化版本，< 1ms）
@@ -170,6 +180,16 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
         
         if (useNearbySearch) {
           // 周边搜索
+          // 清理关键词（移除"最近的"、"附近的"等意图词）
+          const cleanedKeyword = cleanNearbyKeyword(searchText);
+          
+          // 如果清理后关键词为空，不发起搜索，显示空结果
+          if (!cleanedKeyword) {
+            if (cancelled) return;
+            setPlaceResults([]);
+            return;
+          }
+          
           // 确定搜索中心：当前位置 > 搜索标记 > 地图中心
           const searchCenter = userLocation || 
             (useMapStore.getState().searchMarker ? {
@@ -184,7 +204,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
           
           // 先搜索 3km 范围
           result = await tiandituSearchService.searchNearby(
-            searchText,
+            cleanedKeyword,
             tianDiTuToken,
             searchCenter,
             3000,
@@ -194,7 +214,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
           // 如果无结果，扩大到 10km
           if (!result.pois || result.pois.length === 0) {
             result = await tiandituSearchService.searchNearby(
-              searchText,
+              cleanedKeyword,
               tianDiTuToken,
               searchCenter,
               10000,
@@ -352,15 +372,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
     if (!coord) return null;
     
     // 使用 Haversine 公式计算距离
-    const R = 6371000; // 地球半径（米）
-    const dLat = (coord.lat - userLocation.lat) * Math.PI / 180;
-    const dLng = (coord.lng - userLocation.lng) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(coord.lat * Math.PI / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    return calculateHaversineDistance(userLocation, coord);
   };
 
   // 获取距离显示文本（只有获取到当前位置时才显示）
@@ -458,7 +470,13 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
           )
         }
         value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
+        onChange={(e) => {
+          setSearchText(e.target.value);
+          // 用户输入时，如果悬浮窗未显示则显示
+          if (!showResults && !disabled) {
+            setShowResults(true);
+          }
+        }}
         onFocus={(e) => {
           // 如果焦点来自模式切换按钮，不打开结果
           if (e.relatedTarget?.closest('.search-mode-toggle')) {

@@ -1,4 +1,4 @@
 /**
  * 应用版本信息
  */
-export const VERSION = '1.2.3.1';
+export const VERSION = '1.2.5.0';

@@ -1,7 +1,7 @@
 {
   "name": "mappin-app",
   "private": true,
-  "version": "1.2.3.1",
+  "version": "1.2.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run src/test/integration",
+    "test:integration:watch": "vitest src/test/integration"
   },
   "dependencies": {
     "@types/react-window": "^1.8.8",

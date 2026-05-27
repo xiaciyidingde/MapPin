@@ -1,5 +1,5 @@
-import { useState, lazy, Suspense } from 'react';
-import { Layout, Drawer, Button, FloatButton, Spin, Tabs, ConfigProvider, App as AntApp, theme } from 'antd';
+import { useState, lazy, Suspense, useRef } from 'react';
+import { Layout, Button, FloatButton, Spin, Tabs, ConfigProvider, App as AntApp, theme } from 'antd';
 import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { UploadZone } from './components/FileUpload/UploadZone';
 import { FileList } from './components/FileUpload/FileList';
@@ -10,6 +10,7 @@ import { PointSearch } from './components/Search/PointSearch';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
 import { AddPointModal } from './components/AddPoint/AddPointModal';
+import { BottomDrawer } from './components/common/BottomDrawer';
 import { useMapStore, useSettingsStore } from './store';
 import { useDrawerManager, type DrawerType } from './hooks/useDrawerManager';
 import { useLocationTracking } from './hooks/useLocationTracking';
@@ -150,6 +151,7 @@ function AppContent({
 }) {
   const { token } = theme.useToken();
   const { message } = AntApp.useApp();
+  const settingsButtonRef = useRef<HTMLDivElement>(null);
 
   // 添加点位时的提示
   const handleAddPointClick = () => {
@@ -237,9 +239,10 @@ function AppContent({
         
         {/* 右侧按钮 */}
         <div 
+          ref={settingsButtonRef}
           className="settings-button-wrapper"
           onClick={() => {
-            const wrapper = document.querySelector('.settings-button-wrapper');
+            const wrapper = settingsButtonRef.current;
             const isOpen = isDrawerOpen('settings');
             
             if (wrapper) {
@@ -304,20 +307,20 @@ function AppContent({
       </FloatButton.Group>
 
       {/* 文件管理抽屉 */}
-      <Drawer
+      <BottomDrawer
         title="文件管理"
-        placement="bottom"
-        styles={{ 
-          body: { padding: 0, height: 'calc(100vh - 64px - 55px)', maxHeight: 'calc(100dvh - 64px - 55px)', display: 'flex', flexDirection: 'column' },
-          wrapper: { 
-            top: 64,
-            height: 'calc(100vh - 64px)',
-            maxHeight: 'calc(100dvh - 64px)'
+        open={isDrawerOpen('fileManagement')}
+        onClose={closeDrawer}
+        destroyOnClose={true}
+        styles={{
+          body: { 
+            padding: 0, 
+            height: 'calc(100vh - 64px - 55px)', 
+            maxHeight: 'calc(100dvh - 64px - 55px)', 
+            display: 'flex', 
+            flexDirection: 'column' 
           }
         }}
-        onClose={closeDrawer}
-        open={isDrawerOpen('fileManagement')}
-        destroyOnClose={true}
       >
         <Tabs
           activeKey={fileManagementTab}
@@ -358,22 +361,13 @@ function AppContent({
             content: { flex: 1, overflow: 'auto', padding: '16px' }
           }}
         />
-      </Drawer>
+      </BottomDrawer>
 
       {/* 设置抽屉 - 从底部滑上来，不覆盖标题栏 */}
-      <Drawer
+      <BottomDrawer
         title="设置"
-        placement="bottom"
-        onClose={closeDrawer}
         open={isDrawerOpen('settings')}
-        styles={{ 
-          body: { padding: 0 },
-          wrapper: { 
-            top: 64, 
-            height: 'calc(100dvh - 64px)',
-            maxHeight: 'calc(100dvh - 64px)'
-          }
-        }}
+        onClose={closeDrawer}
         destroyOnClose={true}
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
@@ -383,22 +377,13 @@ function AppContent({
             defaultTab={getDrawerTab() || 'global'}
           />
         </Suspense>
-      </Drawer>
+      </BottomDrawer>
 
       {/* 工具抽屉 - 从底部滑上来，高度比设置低 */}
-      <Drawer
+      <BottomDrawer
         title="工具"
-        placement="bottom"
-        onClose={closeDrawer}
         open={isDrawerOpen('tools')}
-        styles={{ 
-          body: { padding: 0 },
-          wrapper: { 
-            top: 64,
-            height: 'calc(100vh - 64px)',
-            maxHeight: 'calc(100dvh - 64px)'
-          }
-        }}
+        onClose={closeDrawer}
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
           <ToolsDrawer
@@ -407,7 +392,7 @@ function AppContent({
             defaultTab={getDrawerTab() || 'points'}
           />
         </Suspense>
-      </Drawer>
+      </BottomDrawer>
 
       {/* 文件设置对话框 */}
       <Suspense fallback={null}>
@@ -419,24 +404,15 @@ function AppContent({
       </Suspense>
 
       {/* 关于抽屉 - 从底部滑上来，不覆盖标题栏 */}
-      <Drawer
+      <BottomDrawer
         title="关于"
-        placement="bottom"
-        onClose={closeDrawer}
         open={isDrawerOpen('about')}
-        styles={{ 
-          body: { padding: 0 },
-          wrapper: { 
-            top: 64, 
-            height: 'calc(100dvh - 64px)',
-            maxHeight: 'calc(100dvh - 64px)'
-          }
-        }}
+        onClose={closeDrawer}
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
           <AboutDrawer />
         </Suspense>
-      </Drawer>
+      </BottomDrawer>
 
       {/* 添加点位 Modal */}
       <AddPointModal

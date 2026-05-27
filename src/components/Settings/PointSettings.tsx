@@ -7,6 +7,8 @@ import { useMapStore, useDataStore } from '../../store';
 import { PointCard } from './PointCard';
 import { RenamePointModal } from '../common/RenamePointModal';
 import { usePointRename } from '../../hooks/usePointRename';
+import { usePointDelete } from '../../hooks/usePointDelete';
+import { useDeleteAnimation } from '../../hooks/useDeleteAnimation';
 import type { MeasurementPoint } from '../../types';
 
 type FilterType = 'all' | 'survey' | 'control' | 'manual';
@@ -19,11 +21,9 @@ export function PointSettings({ onClose }: PointSettingsProps) {
   const { message } = App.useApp();
   const currentFileId = useMapStore((state) => state.currentFileId);
   const points = useDataStore((state) => state.points);
-  const files = useDataStore((state) => state.files);
   const updatePoint = useDataStore((state) => state.updatePoint);
   const batchUpdatePoints = useDataStore((state) => state.batchUpdatePoints);
-  const updateFile = useDataStore((state) => state.updateFile);
-  const deletePoint = useDataStore((state) => state.deletePoint);
+  const recalculateFileStats = useDataStore((state) => state.recalculateFileStats);
   const setView = useMapStore((state) => state.setView);
   const setSelectedPointId = useMapStore((state) => state.setSelectedPointId);
   const [searchText, setSearchText] = useState('');
@@ -42,6 +42,14 @@ export function PointSettings({ onClose }: PointSettingsProps) {
     closeRenameModal,
     confirmRename,
   } = usePointRename(currentFileId);
+  
+  // 使用点位删除 Hook
+  const { handleDelete } = usePointDelete(currentFileId);
+  
+  // 使用删除动画 Hook
+  const { deletingIds, handleDelete: handleDeleteWithAnimation } = useDeleteAnimation({
+    type: 'scaleOut',
+  });
 
   const currentPoints = currentFileId ? points.get(currentFileId) || [] : [];
   
@@ -153,21 +161,8 @@ export function PointSettings({ onClose }: PointSettingsProps) {
       
       await batchUpdatePoints(currentFileId, updates);
       
-      // 重新计算文件的控制点和测量点数量
-      const updatedPoints = currentPoints.map(p => 
-        selectedPointIds.includes(p.id) ? { ...p, type } : p
-      );
-      const controlPointCount = updatedPoints.filter(p => p.type === 'control').length;
-      const surveyPointCount = updatedPoints.filter(p => p.type === 'survey').length;
-      
-      // 更新文件统计信息
-      const currentFile = files.find(f => f.id === currentFileId);
-      if (currentFile) {
-        await updateFile(currentFileId, {
-          controlPointCount,
-          surveyPointCount,
-        });
-      }
+      // 重新计算文件统计
+      await recalculateFileStats(currentFileId);
       
       hide();
       message.success(`已将 ${selectedPointIds.length} 个点标记为${type === 'control' ? '控制点' : '碎部点'}`);
@@ -176,7 +171,7 @@ export function PointSettings({ onClose }: PointSettingsProps) {
       hide();
       message.error('批量修改失败');
     }
-  }, [currentFileId, selectedPointIds, currentPoints, files, batchUpdatePoints, updateFile]);
+  }, [currentFileId, selectedPointIds, batchUpdatePoints, recalculateFileStats]);
 
   // 使用 useCallback 缓存切换类型函数
   const handleToggleType = useCallback(async (point: MeasurementPoint) => {
@@ -186,41 +181,27 @@ export function PointSettings({ onClose }: PointSettingsProps) {
     try {
       await updatePoint(currentFileId, point.id, { type: newType });
       
-      // 重新计算文件的控制点和测量点数量
-      const updatedPoints = currentPoints.map(p => 
-        p.id === point.id ? { ...p, type: newType } : p
-      );
-      const controlPointCount = updatedPoints.filter(p => p.type === 'control').length;
-      const surveyPointCount = updatedPoints.filter(p => p.type === 'survey').length;
-      
-      // 更新文件统计信息
-      const currentFile = files.find(f => f.id === currentFileId);
-      if (currentFile) {
-        await updateFile(currentFileId, {
-          controlPointCount,
-          surveyPointCount,
-        });
-      }
+      // 重新计算文件统计
+      await recalculateFileStats(currentFileId);
       
       message.success(`已将点 ${point.pointNumber} 标记为${newType === 'control' ? '控制点' : '碎部点'}`);
     } catch {
       message.error('修改失败');
     }
-  }, [currentFileId, currentPoints, files, updatePoint, updateFile]);
+  }, [currentFileId, updatePoint, recalculateFileStats]);
 
   // 使用 useCallback 缓存删除函数
   const handleDeletePoint = useCallback(async (point: MeasurementPoint) => {
-    if (!currentFileId) return;
-    
-    try {
-      await deletePoint(currentFileId, point.id);
-      message.success(`已删除点 ${point.pointNumber}`);
-      // 如果删除的点在选中列表中，也要移除
-      setSelectedPointIds((prev) => prev.filter((id) => id !== point.id));
-    } catch {
-      message.error('删除失败');
-    }
-  }, [currentFileId, deletePoint]);
+    await handleDeleteWithAnimation(point.id, async () => {
+      // 执行删除
+      const success = await handleDelete(point.id, point.pointNumber);
+      
+      // 如果删除成功且点在选中列表中，也要移除
+      if (success) {
+        setSelectedPointIds((prev) => prev.filter((id) => id !== point.id));
+      }
+    });
+  }, [handleDelete, handleDeleteWithAnimation]);
 
   // 使用 useCallback 缓存切换选中函数
   const handleToggleSelect = useCallback((pointId: string) => {
@@ -325,6 +306,7 @@ export function PointSettings({ onClose }: PointSettingsProps) {
                   <PointCard
                     point={point}
                     isSelected={selectedPointIds.includes(point.id)}
+                    isDeleting={deletingIds.has(point.id)}
                     onToggleSelect={handleToggleSelect}
                     onToggleType={handleToggleType}
                     onOpenRename={openRenameModal}
