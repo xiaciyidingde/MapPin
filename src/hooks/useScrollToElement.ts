@@ -49,10 +49,10 @@ export function useScrollToElement(options: UseScrollToElementOptions = {}) {
     }
 
     if (!targetRefsMap.current.has(key)) {
-      targetRefsMap.current.set(key, { current: null });
+      targetRefsMap.current.set(key, { current: null as HTMLDivElement | null } as React.RefObject<HTMLDivElement>);
     }
 
-    return targetRefsMap.current.get(key)!;
+    return targetRefsMap.current.get(key) || null;
   }, [targetKeys]);
 
   // 手动触发滚动

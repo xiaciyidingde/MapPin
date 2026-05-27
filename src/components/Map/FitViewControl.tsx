@@ -12,17 +12,18 @@ export function FitViewControl() {
   const points = useDataStore((state) => state.points);
   const currentFileIdRef = useRef(currentFileId);
   const pointsRef = useRef(points);
-  currentFileIdRef.current = currentFileId;
-  pointsRef.current = points;
 
   // 监听触发器变化
   useEffect(() => {
+    currentFileIdRef.current = currentFileId;
+    pointsRef.current = points;
+    
     if (fitToViewTrigger > 0 && currentFileIdRef.current) {
       const currentPoints = pointsRef.current.get(currentFileIdRef.current) || [];
       fitMapToPoints(map, currentPoints, { padding: [50, 50], maxZoom: 24 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitToViewTrigger]);
+  }, [fitToViewTrigger, currentFileId, points]);
 
   useEffect(() => {
     const FitViewButton = L.Control.extend({

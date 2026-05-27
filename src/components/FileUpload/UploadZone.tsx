@@ -468,6 +468,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
       )}
       
       <ZipBatchImportModal
+        key={zipModalOpen ? 'open' : 'closed'}
         open={zipModalOpen}
         files={zipFiles}
         onConfirm={handleZipImport}
