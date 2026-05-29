@@ -30,31 +30,29 @@ export interface AppConfig {
       max: number;
     };
   };
+  location: {
+    timeout: number;
+  };
   map: {
     defaultCenter: {
       lat: number;
       lng: number;
     };
     defaultZoom: number;
+    locateZoomLevel: number;
     minZoom: number;
     maxZoom: number;
     defaultTileSource: string;
     disabledTileSources?: string[];
-    cluster: {
-      radius: number;
-      maxZoom: number;
-    };
     tianDiTuTokens: string[];
   };
   file: {
     maxSizeMB: number;
-    allowedTypes: string[];
-    allowedExtensions: string;
   };
   performance: {
-    largeFileThreshold: number;
-    virtualScrollThreshold: number;
     maxPointsPerFile: number;
+    showLabelsThreshold: number;
+    iconCacheSize: number;
   };
   detection: {
     hrmsThreshold: number;
@@ -67,7 +65,9 @@ export interface AppConfig {
   };
   search: {
     debounceDelay: number;
-    minLength: number;
+  };
+  ui: {
+    messageDisplayDuration: number;
   };
 }
 
@@ -81,25 +81,26 @@ const safeConfig: AppConfig = {
     defaultCentralMeridian: 114,
     centralMeridianRange: { min: 75, max: 135 }
   },
+  location: {
+    timeout: 10000
+  },
   map: {
-    defaultCenter: { lat: 35.0, lng: 105.0 },
-    defaultZoom: 5,
+    defaultCenter: { lat: 39.9, lng: 116.4 },
+    defaultZoom: 15,
+    locateZoomLevel: 18,
     minZoom: 3,
-    maxZoom: 18,
+    maxZoom: 25,
     defaultTileSource: "osm",
     disabledTileSources: [],
-    cluster: { radius: 60, maxZoom: 16 },
     tianDiTuTokens: []
   },
   file: {
-    maxSizeMB: 50,
-    allowedTypes: ["dat", "zip"],
-    allowedExtensions: ".dat,.zip"
+    maxSizeMB: 50
   },
   performance: {
-    largeFileThreshold: 1000,
-    virtualScrollThreshold: 100,
-    maxPointsPerFile: 2000
+    maxPointsPerFile: 2000,
+    showLabelsThreshold: 500,
+    iconCacheSize: 1000
   },
   detection: {
     hrmsThreshold: 0.05,
@@ -108,7 +109,8 @@ const safeConfig: AppConfig = {
     isolatedPointRangeMultiplier: 10
   },
   recycleBin: { maxCapacity: 10000 },
-  search: { debounceDelay: 300, minLength: 1 }
+  search: { debounceDelay: 300 },
+  ui: { messageDisplayDuration: 3000 }
 };
 
 let cachedConfig: AppConfig | null = null;

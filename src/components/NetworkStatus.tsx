@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { message } from 'antd';
+import { message } from '../utils/message';
 
 /**
  * 网络状态监控组件
@@ -19,11 +19,7 @@ export function NetworkStatus() {
     const handleOffline = () => {
       setIsOnline(false);
       if (!hasShownOfflineMessageRef.current) {
-        message.warning({
-          content: '网络已断开，应用将继续使用本地数据',
-          duration: 5,
-          key: 'offline-warning',
-        });
+        message.warning('网络已断开，应用将继续使用本地数据', 5);
         hasShownOfflineMessageRef.current = true;
       }
     };

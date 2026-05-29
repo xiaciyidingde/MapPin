@@ -3,7 +3,7 @@ import { Checkbox, Button, Flex, Tag, Typography, App, Form, Select, InputNumber
 import { FileTextOutlined, AimOutlined } from '@ant-design/icons';
 import { MultiStepModal } from '../common/MultiStepModal';
 import { requestUserLocation, calculateMeridianFromLocation } from '../../utils/locationUtils';
-import { useMapStore } from '../../store';
+import { useMapStore, useSettingsStore } from '../../store';
 import type { ProjectionConfig, CoordinateSystem, ProjectionType } from '../../types';
 
 const { Text } = Typography;
@@ -31,15 +31,20 @@ export function ZipBatchImportModal({
   const { message } = App.useApp();
   const { token } = theme.useToken();
   
+  // 从全局设置读取默认值（优先级高于配置文件）
+  const globalCoordinateSystem = useSettingsStore((state) => state.coordinateSystem);
+  const globalProjectionType = useSettingsStore((state) => state.projectionType);
+  const globalCentralMeridian = useSettingsStore((state) => state.centralMeridian);
+  
   // 文件选择
   const initialSelectedFiles = useMemo(() => files.map(f => f.name), [files]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>(initialSelectedFiles);
   const [currentStep, setCurrentStep] = useState(0);
   
-  // 投影配置
-  const [coordinateSystem, setCoordinateSystem] = useState<CoordinateSystem>('CGCS2000');
-  const [projectionType, setProjectionType] = useState<ProjectionType>('gauss-3');
-  const [centralMeridian, setCentralMeridian] = useState<number>(117);
+  // 投影配置（使用全局设置作为默认值）
+  const [coordinateSystem, setCoordinateSystem] = useState<CoordinateSystem>(globalCoordinateSystem);
+  const [projectionType, setProjectionType] = useState<ProjectionType>(globalProjectionType);
+  const [centralMeridian, setCentralMeridian] = useState<number>(globalCentralMeridian);
   const [gettingLocation, setGettingLocation] = useState(false);
   const userLocation = useMapStore((state) => state.userLocation);
   const locationPermissionDenied = useMapStore((state) => state.locationPermissionDenied);

@@ -161,22 +161,22 @@ describe('useDrawerManager', () => {
       expect(result.current.drawerState.tab).toBe('global');
     });
 
-    it('openTools 应该打开工具抽屉', () => {
+    it('openPointSettings 应该打开点设置抽屉', () => {
       const { result } = renderHook(() => useDrawerManager());
 
       act(() => {
-        result.current.openTools('points');
+        result.current.openPointSettings('points');
       });
 
       expect(result.current.drawerState.type).toBe('tools');
       expect(result.current.drawerState.tab).toBe('points');
     });
 
-    it('openTools 应该使用默认标签页', () => {
+    it('openPointSettings 应该使用默认标签页', () => {
       const { result } = renderHook(() => useDrawerManager());
 
       act(() => {
-        result.current.openTools();
+        result.current.openPointSettings();
       });
 
       expect(result.current.drawerState.type).toBe('tools');
@@ -204,7 +204,7 @@ describe('useDrawerManager', () => {
       expect(result.current.drawerState.type).toBe('about');
     });
 
-    it('openAddPoint 应该打开添加点位 Modal', () => {
+    it('openAddPoint 应该打开工具抽屉', () => {
       const { result } = renderHook(() => useDrawerManager());
 
       act(() => {
@@ -218,7 +218,7 @@ describe('useDrawerManager', () => {
       const { result } = renderHook(() => useDrawerManager());
 
       act(() => {
-        result.current.openTools();
+        result.current.openPointSettings();
       });
 
       expect(result.current.drawerState.type).toBe('tools');
@@ -234,7 +234,7 @@ describe('useDrawerManager', () => {
       const { result } = renderHook(() => useDrawerManager());
 
       act(() => {
-        result.current.openTools();
+        result.current.openPointSettings();
       });
 
       expect(result.current.drawerState.type).toBe('tools');

@@ -94,9 +94,9 @@ export function useDrawerManager() {
   }, [openDrawer, closeAllDrawers]);
 
   /**
-   * 打开工具抽屉
+   * 打开点设置抽屉
    */
-  const openTools = useCallback((tab: string = 'points') => {
+  const openPointSettings = useCallback((tab: string = 'points') => {
     openDrawer('tools', tab);
   }, [openDrawer]);
 
@@ -116,7 +116,7 @@ export function useDrawerManager() {
   }, [openDrawer]);
 
   /**
-   * 打开添加点位 Modal
+   * 打开工具抽屉
    */
   const openAddPoint = useCallback(() => {
     openDrawer('addPoint');
@@ -139,7 +139,7 @@ export function useDrawerManager() {
     // 便捷方法
     openFileManagement,
     openSettings,
-    openTools,
+    openPointSettings,
     openFileSettings,
     openAbout,
     openAddPoint,

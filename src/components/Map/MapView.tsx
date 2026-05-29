@@ -1,20 +1,22 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import type React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { Button, App } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { useMapStore, useDataStore, useSettingsStore } from '../../store';
-import { getMarkerIcon, createSelectedPointIcon, userLocationIcon, selectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
+import { createUserLocationIcon, createSelectedUserLocationIcon, searchMarkerIcon, selectedSearchMarkerIcon } from '../../utils/mapIcons';
 import { FitViewControl } from './FitViewControl';
 import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
-import { PointPopup } from './PointPopup';
+import { OptimizedMarker } from './OptimizedMarker';
 import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken } from '../../config/mapTileSources';
 import type { MeasurementPoint } from '../../types';
 import type { Marker as LeafletMarker } from 'leaflet';
 import { appConfig } from '../../config/appConfig';
 import { createVirtualPoint, fitMapToPoints } from '../../utils/mapUtils';
+import { useCompass } from '../../hooks/useCompass';
 
 // 动态计算聚合半径：点越多，聚合半径越大
 function calculateClusterRadius(pointCount: number): number {
@@ -67,7 +69,9 @@ function AutoFitBounds({ points, fileId }: { points: MeasurementPoint[]; fileId:
         fitMapToPoints(map, points, { padding: [50, 50], maxZoom: 24 });
       }
     }
-  }, [fileId, points, map]); // 移除 points.length，使用 points 本身
+  // 不依赖 points，避免点位操作触发自动缩放
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, map]);
 
   return null;
 }
@@ -101,16 +105,23 @@ function MapBoundsUpdater() {
       });
     };
 
+    const handleZoomEnd = () => {
+      const currentZoom = map.getZoom();
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      console.log(`[${time}][缩放] 当前缩放等级: ${currentZoom}`);
+      updateBounds();
+    };
+
     // 初始更新
     updateBounds();
 
     // 监听地图移动和缩放
     map.on('moveend', updateBounds);
-    map.on('zoomend', updateBounds);
+    map.on('zoomend', handleZoomEnd);
 
     return () => {
       map.off('moveend', updateBounds);
-      map.off('zoomend', updateBounds);
+      map.off('zoomend', handleZoomEnd);
     };
   }, [map, setMapBounds]);
 
@@ -176,6 +187,12 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const showPointLabelsConfig = useSettingsStore((state) => state.showPointLabels);
   const mapTileSource = useSettingsStore((state) => state.mapTileSource);
   const tianDiTuToken = useSettingsStore((state) => state.apiKeys.tianditu);
+
+  // 使用指南针获取设备方向（100ms 节流）
+  const { heading: compassHeading, isSupported: isCompassSupported } = useCompass(showUserLocation, 100);
+  
+  // 用户位置方向：支持指南针则使用指南针方向，否则固定向上
+  const userHeading = isCompassSupported ? compassHeading : 0;
 
   // Token 切换计数器，用于强制刷新 TileLayer
   const [tokenSwitchCount, setTokenSwitchCount] = useState(0);
@@ -313,25 +330,8 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
 
   const validPoints = codeFilteredPoints.filter((p) => p.lat && p.lng);
   
-  // 按类型分组，避免多次遍历
-  const { surveyPoints, controlPoints } = useMemo(() => {
-    const survey: MeasurementPoint[] = [];
-    const control: MeasurementPoint[] = [];
-    
-    for (const point of validPoints) {
-      if (point.type === 'survey') {
-        survey.push(point);
-      } else {
-        control.push(point);
-      }
-    }
-    
-    return { surveyPoints: survey, controlPoints: control };
-  }, [validPoints]);
-  
-  // 当点位数量大于 500 时，自动禁用点位号悬浮窗以提升性能
-  const TOOLTIP_THRESHOLD = 500;
-  const showPointLabels = showPointLabelsConfig && currentPoints.length <= TOOLTIP_THRESHOLD;
+  // 当点位数量大于阈值时，自动禁用点位号悬浮窗以提升性能
+  const showPointLabels = showPointLabelsConfig && currentPoints.length <= appConfig.performance.showLabelsThreshold;
   
   // 智能聚合逻辑：根据点数量动态调整
   // 点数量 >= 500 时启用聚合，但在高缩放级别（>= 16）时停止聚合
@@ -344,39 +344,46 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
     measureToolRef.current?.selectPoint(virtualPoint);
   }, []);
 
-  // 渲染单个标记点（使用 useCallback 避免重复创建）
-  const renderMarker = useCallback((point: MeasurementPoint) => {
-    // 判断点是否被选中
-    const isSelected = selectedPointIds.includes(point.id);
-    // 根据选中状态和标签显示设置创建图标
-    const icon = isSelected 
-      ? createSelectedPointIcon(point.pointNumber, point.code, showPointLabels)
-      : getMarkerIcon(point.type, point.pointNumber, point.code, showPointLabels);
+  // Marker ref 回调（使用 useCallback 避免重复创建）
+  const handleMarkerRef = useCallback((id: string, ref: LeafletMarker | null) => {
+    if (ref) {
+      markerRefs.current.set(id, ref);
+    }
+  }, []);
+
+  // 测量点击回调（使用 useCallback 避免重复创建）
+  const handleMeasureClick = useCallback((point: MeasurementPoint) => {
+    measureToolRef.current?.selectPoint(point);
+  }, []);
+
+  // 使用 useMemo 缓存渲染的标记列表，并按类型分组
+  const { surveyMarkers, controlMarkers } = useMemo(() => {
+    const survey: React.ReactElement[] = [];
+    const control: React.ReactElement[] = [];
     
-    return (
-      <Marker
-        key={point.id}
-        position={[point.lat!, point.lng!]}
-        icon={icon}
-        ref={(ref) => {
-          if (ref) {
-            markerRefs.current.set(point.id, ref);
-          }
-        }}
-        eventHandlers={{
-          click: (e) => {
-            // 测量模式下调用测量工具的选择函数
-            if (measureActive) {
-              e.originalEvent.stopPropagation();
-              measureToolRef.current?.selectPoint(point);
-            }
-          },
-        }}
-      >
-        {!measureActive && <PointPopup point={point} />}
-      </Marker>
-    );
-  }, [selectedPointIds, showPointLabels, measureActive]);
+    validPoints.forEach((point) => {
+      const isSelected = selectedPointIds.includes(point.id);
+      const marker = (
+        <OptimizedMarker
+          key={point.id}
+          point={point}
+          isSelected={isSelected}
+          showPointLabels={showPointLabels}
+          measureActive={measureActive}
+          onMarkerRef={handleMarkerRef}
+          onMeasureClick={handleMeasureClick}
+        />
+      );
+      
+      if (point.type === 'control') {
+        control.push(marker);
+      } else {
+        survey.push(marker);
+      }
+    });
+    
+    return { surveyMarkers: survey, controlMarkers: control };
+  }, [validPoints, selectedPointIds, showPointLabels, measureActive, handleMarkerRef, handleMeasureClick]);
 
   // 始终显示地图，即使没有选择文件
   // 底图过渡显示条件
@@ -388,8 +395,8 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}
-        minZoom={3}
-        maxZoom={25}
+        minZoom={appConfig.map.minZoom}
+        maxZoom={appConfig.map.maxZoom}
         className="w-full h-full"
         zoomControl={true}
         attributionControl={true}
@@ -517,19 +524,19 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
           animateAddingMarkers={false}
         >
           {/* 先渲染测量点 */}
-          {surveyPoints.map(renderMarker)}
+          {surveyMarkers}
 
           {/* 再渲染控制点，确保显示在测量点上层 */}
-          {controlPoints.map(renderMarker)}
+          {controlMarkers}
         </MarkerClusterGroup>
       ) : (
         // 点数量 < 500：直接渲染，不使用聚合
         <>
           {/* 先渲染测量点 */}
-          {surveyPoints.map(renderMarker)}
+          {surveyMarkers}
 
           {/* 再渲染控制点，确保显示在测量点上层 */}
-          {controlPoints.map(renderMarker)}
+          {controlMarkers}
         </>
       )}
 
@@ -537,7 +544,9 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       {showUserLocation && userLocation && (
         <Marker
           position={[userLocation.lat, userLocation.lng]}
-          icon={selectedPointIds.includes('user-location') ? selectedUserLocationIcon : userLocationIcon}
+          icon={selectedPointIds.includes('user-location') 
+            ? createSelectedUserLocationIcon(userHeading) 
+            : createUserLocationIcon(userHeading)}
           zIndexOffset={1000}
           eventHandlers={{
             click: (e) => {

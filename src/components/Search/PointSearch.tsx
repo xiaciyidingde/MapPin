@@ -8,6 +8,7 @@ import { tiandituSearchService, type TiandituPOI, type TiandituArea, type Tiandi
 import { formatDistance } from '../../services/measurementService';
 import type { MeasurementPoint } from '../../types';
 import { calculateHaversineDistance } from '../../utils/distanceUtils';
+import { appConfig } from '../../config/appConfig';
 
 type SearchMode = 'point' | 'place';
 
@@ -166,7 +167,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
       return;
     }
 
-    // 防抖：500ms后执行搜索
+    // 防抖：使用配置的延迟时间后执行搜索
     let cancelled = false;
     searchTimerRef.current = setTimeout(async () => {
       if (cancelled) return;
@@ -290,7 +291,7 @@ export function PointSearch({ disabled = false }: { disabled?: boolean }) {
           setSearching(false);
         }
       }
-    }, 500);
+    }, appConfig.search.debounceDelay);
 
     return () => {
       cancelled = true;

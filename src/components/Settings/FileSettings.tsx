@@ -197,8 +197,8 @@ export function FileSettings({ open, fileId, onClose }: FileSettingsProps) {
           <Space.Compact style={{ width: '100%' }}>
             <InputNumber
               value={centralMeridian}
-              min={75}
-              max={135}
+              min={appConfig.coordinate.centralMeridianRange.min}
+              max={appConfig.coordinate.centralMeridianRange.max}
               step={projectionType === 'gauss-3' ? 3 : 6}
               style={{ width: '100%' }}
               onChange={(value) => value != null && setCentralMeridian(value)}

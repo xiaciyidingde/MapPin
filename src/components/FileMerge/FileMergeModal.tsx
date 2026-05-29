@@ -1,4 +1,5 @@
-import { Checkbox, Input, Radio, Space, Alert, Typography, Flex, Button, Spin, Table, Popover, message, theme } from 'antd';
+import { Checkbox, Input, Radio, Space, Alert, Typography, Flex, Button, Spin, Table, Popover, theme } from 'antd';
+import { message } from '../../utils/message';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { QuestionCircleOutlined, EditOutlined } from '@ant-design/icons';
 import { MultiStepModal } from '../common/MultiStepModal';

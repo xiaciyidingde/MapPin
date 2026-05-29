@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { message } from 'antd';
+import { message as antdMessage } from 'antd';
 import { errorHandler } from '../services/errorHandler';
 
 interface UseAsyncOperationOptions {
@@ -27,7 +27,7 @@ export function useAsyncOperation<T extends (...args: unknown[]) => Promise<unkn
     const messageKey = 'async-operation';
 
     if (options.showLoading) {
-      message.loading({
+      antdMessage.loading({
         content: options.loadingMessage || '处理中...',
         key: messageKey,
         duration: 0,
@@ -40,7 +40,7 @@ export function useAsyncOperation<T extends (...args: unknown[]) => Promise<unkn
       if (options.successMessage) {
         if (options.showLoading) {
           // 使用相同的 key，自动替换 loading 消息
-          message.success({
+          antdMessage.success({
             content: options.successMessage,
             key: messageKey,
           });
@@ -49,7 +49,7 @@ export function useAsyncOperation<T extends (...args: unknown[]) => Promise<unkn
         }
       } else if (options.showLoading) {
         // 如果没有成功消息，只关闭 loading
-        message.destroy(messageKey);
+        antdMessage.destroy(messageKey);
       }
 
       return result as Awaited<ReturnType<T>>;
@@ -61,7 +61,7 @@ export function useAsyncOperation<T extends (...args: unknown[]) => Promise<unkn
       
       if (options.showLoading) {
         // 使用相同的 key，自动替换 loading 消息
-        message.error({
+        antdMessage.error({
           content: errorMsg,
           key: messageKey,
         });
