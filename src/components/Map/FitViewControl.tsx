@@ -17,13 +17,14 @@ export function FitViewControl() {
   useEffect(() => {
     currentFileIdRef.current = currentFileId;
     pointsRef.current = points;
-    
+  }, [currentFileId, points]);
+
+  useEffect(() => {
     if (fitToViewTrigger > 0 && currentFileIdRef.current) {
       const currentPoints = pointsRef.current.get(currentFileIdRef.current) || [];
       fitMapToPoints(map, currentPoints, { padding: [50, 50], maxZoom: 24 });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitToViewTrigger, currentFileId, points]);
+  }, [fitToViewTrigger, map]);
 
   useEffect(() => {
     const FitViewButton = L.Control.extend({

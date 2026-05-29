@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense, useRef } from 'react';
 import { Layout, Button, FloatButton, Spin, Tabs, ConfigProvider, App as AntApp, theme } from 'antd';
-import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { UploadZone } from './components/FileUpload/UploadZone';
 import { FileList } from './components/FileUpload/FileList';
 import { Statistics } from './components/DataPanel/Statistics';
@@ -9,7 +9,6 @@ import { MapView } from './components/Map/MapView';
 import { PointSearch } from './components/Search/PointSearch';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NetworkStatus } from './components/NetworkStatus';
-import { AddPointModal } from './components/AddPoint/AddPointModal';
 import { BottomDrawer } from './components/common/BottomDrawer';
 import { useMapStore, useSettingsStore } from './store';
 import { useDrawerManager, type DrawerType } from './hooks/useDrawerManager';
@@ -22,6 +21,7 @@ import './App.css';
 // 懒加载非首屏组件
 const SettingsDrawer = lazy(() => import('./components/Settings/SettingsDrawer').then(module => ({ default: module.SettingsDrawer })));
 const ToolsDrawer = lazy(() => import('./components/Tools/ToolsDrawer').then(module => ({ default: module.ToolsDrawer })));
+const AddPointDrawer = lazy(() => import('./components/AddPoint/AddPointDrawer').then(module => ({ default: module.AddPointDrawer })));
 const FileSettings = lazy(() => import('./components/Settings/FileSettings').then(module => ({ default: module.FileSettings })));
 const AboutDrawer = lazy(() => import('./components/About/AboutDrawer').then(module => ({ default: module.AboutDrawer })));
 
@@ -37,7 +37,7 @@ function App() {
     closeDrawer,
     openFileManagement,
     openSettings,
-    openTools,
+    openPointSettings,
     openFileSettings,
     openAbout,
     openAddPoint,
@@ -79,7 +79,7 @@ function App() {
             closeDrawer={closeDrawer}
             openFileManagement={openFileManagement}
             openSettings={openSettings}
-            openTools={openTools}
+            openPointSettings={openPointSettings}
             openFileSettings={openFileSettings}
             openAbout={openAbout}
             openAddPoint={openAddPoint}
@@ -110,7 +110,7 @@ function AppContent({
   closeDrawer,
   openFileManagement,
   openSettings,
-  openTools,
+  openPointSettings,
   openFileSettings,
   openAbout,
   getDrawerTab,
@@ -132,7 +132,7 @@ function AppContent({
   closeDrawer: () => void;
   openFileManagement: () => void;
   openSettings: (tab: string) => void;
-  openTools: (tab: string) => void;
+  openPointSettings: (tab: string) => void;
   openFileSettings: (fileId: string) => void;
   openAbout: () => void;
   openAddPoint: () => void;
@@ -153,8 +153,8 @@ function AppContent({
   const { message } = AntApp.useApp();
   const settingsButtonRef = useRef<HTMLDivElement>(null);
 
-  // 添加点位时的提示
-  const handleAddPointClick = () => {
+  // 打开工具抽屉时的提示
+  const handleToolsClick = () => {
     if (!_currentFileId) {
       message.warning('请先打开文件');
       return;
@@ -278,16 +278,16 @@ function AppContent({
           onClick={openAbout}
         />
         <FloatButton
-          icon={<PlusOutlined />}
-          onClick={handleAddPointClick}
+          icon={<ToolOutlined />}
+          onClick={handleToolsClick}
         />
         <FloatButton
           icon={baseMapMode === 'map' ? <AppstoreOutlined /> : <GlobalOutlined />}
           onClick={() => setBaseMapMode(baseMapMode === 'map' ? 'grid' : 'map')}
         />
         <FloatButton
-          icon={<ToolOutlined />}
-          onClick={() => openTools('points')}
+          icon={<SettingOutlined />}
+          onClick={() => openPointSettings('points')}
         />
         <FloatButton
           icon={<ColumnWidthOutlined />}
@@ -379,9 +379,9 @@ function AppContent({
         </Suspense>
       </BottomDrawer>
 
-      {/* 工具抽屉 - 从底部滑上来，高度比设置低 */}
+      {/* 点设置抽屉 - 从底部滑上来，高度比设置低 */}
       <BottomDrawer
-        title="工具"
+        title="点设置"
         open={isDrawerOpen('tools')}
         onClose={closeDrawer}
       >
@@ -414,11 +414,20 @@ function AppContent({
         </Suspense>
       </BottomDrawer>
 
-      {/* 添加点位 Modal */}
-      <AddPointModal
+      {/* 工具抽屉 */}
+      <BottomDrawer
+        title="工具"
         open={isDrawerOpen('addPoint')}
         onClose={closeDrawer}
-      />
+      >
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
+          <AddPointDrawer
+            open={isDrawerOpen('addPoint')}
+            onClose={closeDrawer}
+            defaultTab={getDrawerTab() || 'add'}
+          />
+        </Suspense>
+      </BottomDrawer>
     </Layout>
     </div>
   );

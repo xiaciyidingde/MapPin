@@ -69,7 +69,9 @@ function AutoFitBounds({ points, fileId }: { points: MeasurementPoint[]; fileId:
         fitMapToPoints(map, points, { padding: [50, 50], maxZoom: 24 });
       }
     }
-  }, [fileId, points, map]); // 移除 points.length，使用 points 本身
+  // 不依赖 points，避免点位操作触发自动缩放
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, map]);
 
   return null;
 }
