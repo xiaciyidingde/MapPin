@@ -1,5 +1,35 @@
 # 更新日志
 
+## [v1.2.7.0] - 2026-05-29
+
+### 配置系统优化
+- **配置文件重构**
+  - 新增 `location` 配置组：位置追踪相关配置（更新间隔、超时）
+  - 新增 `ui` 配置组：UI 交互配置（消息显示时长）
+  - 删除未使用的配置：`map.cluster.*`、`performance.virtualScrollThreshold`、`file.allowedTypes`、`search.minLength`、`performance.largeFileThreshold`、`location.headingThrottleDelay`
+
+### 界面优化
+- 删除当前位置图标的脉冲动画效果
+- 在设置中添加位置更新间隔输入框
+
+### 新增功能
+- **定位图标支持指南针方向**
+  - 支持指南针设备：箭头实时跟随设备朝向旋转
+  - 不支持指南针设备：箭头固定向上
+
+### 性能优化
+- **点位标签渲染性能优化**
+  - 启用 GPU 加速（transform: translateZ(0)）
+  - 添加 will-change 和 backface-visibility 优化
+  
+- **点位重绘优化**
+  - 添加图标缓存机制，避免重复创建相同图标
+  - 修复悬浮按钮点击触发所有点位重绘的问题
+
+### 开发工具
+- **完整测试脚本**
+  - 新增 `test-all.sh` 和 `test-all.bat`测试脚本
+
 ## [v1.2.6.0] - 2026-05-27
 
 ### 界面优化

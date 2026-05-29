@@ -1,5 +1,7 @@
-import { message, notification } from 'antd';
+import { notification } from 'antd';
+import { message } from '../utils/message';
 import { isDevelopment } from '../utils/env';
+import { appConfig } from '../config/appConfig';
 
 export enum ErrorType {
   FILE_PARSE = 'FILE_PARSE',
@@ -29,7 +31,7 @@ class ErrorHandler {
     [ErrorType.UNKNOWN]: '未知错误',
   };
 
-  showError(error: AppError | string, duration = 3) {
+  showError(error: AppError | string, duration?: number) {
     const errorMessage =
       typeof error === 'string' ? error : error.message || this.errorMessages[error.type];
     message.error(errorMessage, duration);
@@ -45,15 +47,15 @@ class ErrorHandler {
     });
   }
 
-  showSuccess(msg: string, duration = 2) {
+  showSuccess(msg: string, duration?: number) {
     message.success(msg, duration);
   }
 
-  showWarning(msg: string, duration = 3) {
+  showWarning(msg: string, duration?: number) {
     message.warning(msg, duration);
   }
 
-  showInfo(msg: string, duration = 2) {
+  showInfo(msg: string, duration?: number) {
     message.info(msg, duration);
   }
 
@@ -61,8 +63,8 @@ class ErrorHandler {
     if (error.message.includes('size')) {
       return {
         type: ErrorType.FILE_SIZE,
-        message: `文件 ${fileName} 超过 50MB 限制`,
-        details: '请选择小于 50MB 的文件',
+        message: `文件 ${fileName} 超过 ${appConfig.file.maxSizeMB}MB 限制`,
+        details: `请选择小于 ${appConfig.file.maxSizeMB}MB 的文件`,
         originalError: error,
       };
     }

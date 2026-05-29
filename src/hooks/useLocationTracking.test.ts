@@ -2,19 +2,35 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLocationTracking } from './useLocationTracking';
 import { useMapStore } from '../store';
-import { message } from 'antd';
+import { message } from '../utils/message';
 
-// Mock stores
-vi.mock('../store', () => ({
-  useMapStore: vi.fn(),
+// Mock appConfig
+vi.mock('../config/appConfig', () => ({
+  appConfig: {
+    location: {
+      updateInterval: 5000,
+      timeout: 10000,
+    },
+    map: {
+      locateZoomLevel: 18,
+    },
+    ui: {
+      messageDisplayDuration: 3000,
+    },
+  },
 }));
 
-// Mock antd message
-vi.mock('antd', () => ({
+// Mock message utility
+vi.mock('../utils/message', () => ({
   message: {
     error: vi.fn(),
     warning: vi.fn(),
   },
+}));
+
+// Mock stores
+vi.mock('../store', () => ({
+  useMapStore: vi.fn(),
 }));
 
 describe('useLocationTracking', () => {
@@ -99,7 +115,7 @@ describe('useLocationTracking', () => {
       renderHook(() => useLocationTracking(true));
 
       await waitFor(() => {
-        expect(mockSetView).toHaveBeenCalledWith({ lat: 39.9, lng: 116.4 }, 16);
+        expect(mockSetView).toHaveBeenCalledWith({ lat: 39.9, lng: 116.4 }, 18);
       });
     });
 
@@ -256,10 +272,10 @@ describe('useLocationTracking', () => {
       });
 
       await waitFor(() => {
-        expect(message.error).toHaveBeenCalledWith({
-          content: '定位权限被拒绝，请在浏览器设置中允许访问位置信息',
-          duration: 5,
-        });
+        expect(message.error).toHaveBeenCalledWith(
+          '定位权限被拒绝，请在浏览器设置中允许访问位置信息',
+          5
+        );
       });
 
       expect(mockSetLocationPermissionDenied).toHaveBeenCalledWith(true);

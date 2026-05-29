@@ -456,7 +456,7 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
   position: absolute;
   top: -32px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateZ(0);
   color: #000;
   white-space: nowrap;
   pointer-events: none;
@@ -471,12 +471,17 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
     -1px 1px 0 #fff,
     1px 1px 0 #fff,
     0 0 3px #fff;
+  /* GPU 加速优化 */
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .marker-label-number {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
+  /* GPU 加速优化 */
+  transform: translateZ(0);
 }
 
 .marker-label-code {
@@ -484,14 +489,6 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
   font-weight: 400;
   opacity: 0.75;
   line-height: 1.2;
-}
-
-[data-theme="dark"] .marker-label {
-  color: #fff;
-  text-shadow: 
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000,
-    0 0 3px #000;
+  /* GPU 加速优化 */
+  transform: translateZ(0);
 }

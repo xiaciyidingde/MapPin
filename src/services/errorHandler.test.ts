@@ -1,15 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { errorHandler, ErrorType, type AppError } from './errorHandler';
-import { message, notification } from 'antd';
+import { message } from '../utils/message';
+import { notification } from 'antd';
 
-// Mock antd 组件
-vi.mock('antd', () => ({
+// Mock appConfig
+vi.mock('../config/appConfig', () => ({
+  appConfig: {
+    ui: {
+      messageDisplayDuration: 3000,
+    },
+    file: {
+      maxSizeMB: 50,
+    },
+  },
+}));
+
+// Mock message utility
+vi.mock('../utils/message', () => ({
   message: {
-    error: vi.fn(),
     success: vi.fn(),
+    error: vi.fn(),
     warning: vi.fn(),
     info: vi.fn(),
+    loading: vi.fn(),
   },
+}));
+
+// Mock antd notification
+vi.mock('antd', () => ({
   notification: {
     error: vi.fn(),
   },
@@ -32,7 +50,7 @@ describe('errorHandler', () => {
   describe('showError', () => {
     it('应该显示字符串错误消息', () => {
       errorHandler.showError('测试错误');
-      expect(message.error).toHaveBeenCalledWith('测试错误', 3);
+      expect(message.error).toHaveBeenCalledWith('测试错误', undefined);
     });
 
     it('应该显示 AppError 对象的消息', () => {
@@ -41,7 +59,7 @@ describe('errorHandler', () => {
         message: '文件解析错误',
       };
       errorHandler.showError(error);
-      expect(message.error).toHaveBeenCalledWith('文件解析错误', 3);
+      expect(message.error).toHaveBeenCalledWith('文件解析错误', undefined);
     });
 
     it('应该使用默认错误消息当 AppError 没有 message 时', () => {
@@ -50,7 +68,7 @@ describe('errorHandler', () => {
         message: '',
       };
       errorHandler.showError(error);
-      expect(message.error).toHaveBeenCalledWith('数据库操作失败', 3);
+      expect(message.error).toHaveBeenCalledWith('数据库操作失败', undefined);
     });
 
     it('应该支持自定义持续时间', () => {
@@ -93,7 +111,7 @@ describe('errorHandler', () => {
   describe('showSuccess', () => {
     it('应该显示成功消息', () => {
       errorHandler.showSuccess('操作成功');
-      expect(message.success).toHaveBeenCalledWith('操作成功', 2);
+      expect(message.success).toHaveBeenCalledWith('操作成功', undefined);
     });
 
     it('应该支持自定义持续时间', () => {
@@ -105,7 +123,7 @@ describe('errorHandler', () => {
   describe('showWarning', () => {
     it('应该显示警告消息', () => {
       errorHandler.showWarning('警告信息');
-      expect(message.warning).toHaveBeenCalledWith('警告信息', 3);
+      expect(message.warning).toHaveBeenCalledWith('警告信息', undefined);
     });
 
     it('应该支持自定义持续时间', () => {
@@ -117,7 +135,7 @@ describe('errorHandler', () => {
   describe('showInfo', () => {
     it('应该显示信息消息', () => {
       errorHandler.showInfo('提示信息');
-      expect(message.info).toHaveBeenCalledWith('提示信息', 2);
+      expect(message.info).toHaveBeenCalledWith('提示信息', undefined);
     });
 
     it('应该支持自定义持续时间', () => {

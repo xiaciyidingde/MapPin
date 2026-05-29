@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { LatLng } from '../types';
+import { appConfig } from '../config/appConfig';
 
 interface MapStore {
   // 当前显示的文件
@@ -64,8 +65,8 @@ export const useMapStore = create<MapStore>()(
     (set) => ({
       // 初始状态
       currentFileId: null,
-      center: { lat: 39.9, lng: 116.4 }, // 北京（默认）
-      zoom: 15, // 增加默认缩放级别
+      center: appConfig.map.defaultCenter,
+      zoom: appConfig.map.defaultZoom,
       mapBounds: null,
       userLocation: null,
       userLocationAccuracy: null,

@@ -13,6 +13,7 @@ import type { ProjectionConfig } from '../../types';
 import { useFileNameValidation } from '../../hooks/useFileNameValidation';
 import { useFileSwitch } from '../../hooks/useFileSwitch';
 import { isValidFileSize, isValidFileType } from '../../utils/sanitize';
+import { appConfig } from '../../config/appConfig';
 
 const { Dragger } = Upload;
 
@@ -414,8 +415,8 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
     beforeUpload: async (file) => {
       // ZIP 文件处理
       if (file.name.toLowerCase().endsWith('.zip')) {
-        if (!isValidFileSize(file.size, 50)) {
-          message.error('文件大小不能超过 50MB');
+        if (!isValidFileSize(file.size, appConfig.file.maxSizeMB)) {
+          message.error(`文件大小不能超过 ${appConfig.file.maxSizeMB}MB`);
           return Upload.LIST_IGNORE;
         }
         
@@ -429,9 +430,9 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
         return Upload.LIST_IGNORE;
       }
 
-      // 文件大小验证（50MB）
-      if (!isValidFileSize(file.size, 50)) {
-        message.error('文件大小不能超过 50MB');
+      // 文件大小验证
+      if (!isValidFileSize(file.size, appConfig.file.maxSizeMB)) {
+        message.error(`文件大小不能超过 ${appConfig.file.maxSizeMB}MB`);
         return Upload.LIST_IGNORE;
       }
 
@@ -451,7 +452,7 @@ export function UploadZone({ onFileUploaded }: UploadZoneProps) {
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-          <p className="ant-upload-hint">支持 .dat 文件或 .zip 压缩包，最大 50MB</p>
+          <p className="ant-upload-hint">支持 .dat 文件或 .zip 压缩包，最大 {appConfig.file.maxSizeMB}MB</p>
         </Dragger>
       </div>
 

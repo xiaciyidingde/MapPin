@@ -2,7 +2,7 @@
  * 位置获取和中央经线计算工具函数
  */
 
-import { message as antdMessage } from 'antd';
+import { message } from '../utils/message';
 import { calculateCentralMeridian } from './projectionUtils';
 
 export interface Location {
@@ -70,35 +70,30 @@ export async function requestLocationAndCalculateMeridian(
   onError?: (error: GeolocationError) => void
 ): Promise<void> {
   if (!navigator.geolocation) {
-    antdMessage.error('您的浏览器不支持定位功能');
+    message.error('您的浏览器不支持定位功能');
     return;
   }
 
-  antdMessage.loading({ content: '正在获取位置信息...', key: 'location' });
+  message.loading('正在获取位置信息...', 0);
 
   try {
     const location = await requestUserLocation();
     const meridian = calculateMeridianFromLocation(location, projectionType);
     
-    antdMessage.success({
-      content: `已自动计算中央经线：${meridian}°E`,
-      key: 'location',
-    });
+    message.success(`已自动计算中央经线：${meridian}°E`);
 
     onSuccess(location, meridian);
   } catch (error) {
-    antdMessage.destroy('location');
-
     const geoError = error as GeolocationPositionError;
     
     if (geoError.code === geoError.PERMISSION_DENIED) {
-      antdMessage.error('位置权限被拒绝，请在浏览器设置中允许访问位置信息');
+      message.error('位置权限被拒绝，请在浏览器设置中允许访问位置信息');
     } else if (geoError.code === geoError.POSITION_UNAVAILABLE) {
-      antdMessage.error('无法获取位置信息，请检查设备定位功能是否开启');
+      message.error('无法获取位置信息，请检查设备定位功能是否开启');
     } else if (geoError.code === geoError.TIMEOUT) {
-      antdMessage.error('获取位置信息超时，请重试');
+      message.error('获取位置信息超时，请重试');
     } else {
-      antdMessage.error('无法获取位置信息，请稍后再试');
+      message.error('无法获取位置信息，请稍后再试');
     }
 
     onError?.(geoError);

@@ -5,6 +5,7 @@ import type {
   RecycleBinItem,
 } from '../types';
 import { errorHandler } from './errorHandler';
+import { appConfig } from '../config/appConfig';
 
 // 数据服务抽象接口
 export interface IDataService {
@@ -151,13 +152,14 @@ export class LocalDataService implements IDataService {
     return this.handleOperation(async () => {
       await db.recycleBin.put(item);
 
-      // 检查回收站容量限制（10000项）
+      // 检查回收站容量限制
       const count = await db.recycleBin.count();
-      if (count > 10000) {
+      const maxCapacity = appConfig.recycleBin.maxCapacity;
+      if (count > maxCapacity) {
         // 删除最早的项目
         const oldestItems = await db.recycleBin
           .orderBy('deletedTime')
-          .limit(count - 10000)
+          .limit(count - maxCapacity)
           .toArray();
         const idsToDelete = oldestItems.map((item) => item.id);
         await db.recycleBin.bulkDelete(idsToDelete);

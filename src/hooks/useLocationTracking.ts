@@ -1,12 +1,18 @@
 import { useEffect, useCallback } from 'react';
-import { message } from 'antd';
+import { message } from '../utils/message';
 import { useMapStore } from '../store';
+import { appConfig } from '../config/appConfig';
 
 /**
  * 位置追踪 Hook
  * 管理用户位置的获取和持续追踪
+ * @param autoLocate 是否自动定位
+ * @param onHeadingChange 方向变化回调函数
  */
-export function useLocationTracking(autoLocate: boolean) {
+export function useLocationTracking(
+  autoLocate: boolean, 
+  onHeadingChange?: (heading: number) => void
+) {
   const setView = useMapStore((state) => state.setView);
   const setUserLocation = useMapStore((state) => state.setUserLocation);
   const userLocation = useMapStore((state) => state.userLocation);
@@ -19,15 +25,15 @@ export function useLocationTracking(autoLocate: boolean) {
   const handleLocate = useCallback(() => {
     if (userLocation) {
       // 强制触发更新：先设置一个临时的不同值，然后再设置目标值
-      setView({ lat: userLocation.lat + 0.0001, lng: userLocation.lng }, 18);
+      setView({ lat: userLocation.lat + 0.0001, lng: userLocation.lng }, appConfig.map.locateZoomLevel);
       setTimeout(() => {
-        setView(userLocation, 18);
+        setView(userLocation, appConfig.map.locateZoomLevel);
       }, 10);
     } else if (navigator.geolocation) {
       // 高精度定位配置
       const highAccuracyOptions: PositionOptions = {
         enableHighAccuracy: true,  // 启用高精度模式（GPS）
-        timeout: 10000,            // 10秒超时
+        timeout: appConfig.location.timeout,
         maximumAge: 0,             // 不使用缓存
       };
 
@@ -39,7 +45,7 @@ export function useLocationTracking(autoLocate: boolean) {
           };
           const accuracy = position.coords.accuracy;
           setUserLocation(location, accuracy);
-          setView(location, 18);
+          setView(location, appConfig.map.locateZoomLevel);
           setLocationPermissionDenied(false);
         },
         (error) => {
@@ -47,10 +53,7 @@ export function useLocationTracking(autoLocate: boolean) {
           
           if (error.code === error.PERMISSION_DENIED) {
             setLocationPermissionDenied(true);
-            message.error({
-              content: '定位权限被拒绝，请在浏览器设置中允许访问位置信息',
-              duration: 5,
-            });
+            message.error('定位权限被拒绝，请在浏览器设置中允许访问位置信息', 5);
           } else if (error.code === error.TIMEOUT) {
             message.warning('定位超时，请确保 GPS 已开启并在户外或窗边');
           } else {
@@ -72,7 +75,7 @@ export function useLocationTracking(autoLocate: boolean) {
       // 高精度定位配置
       const highAccuracyOptions: PositionOptions = {
         enableHighAccuracy: true,  // 启用高精度模式（GPS）
-        timeout: 10000,            // 10秒超时
+        timeout: appConfig.location.timeout,
         maximumAge: 0,             // 不使用缓存，每次都获取新位置
       };
 
@@ -87,9 +90,14 @@ export function useLocationTracking(autoLocate: boolean) {
           setUserLocation(location, accuracy);
           setLocationPermissionDenied(false);
           
+          // 获取方向信息（如果支持）
+          if (position.coords.heading !== null && position.coords.heading !== undefined && onHeadingChange) {
+            onHeadingChange(position.coords.heading);
+          }
+          
           // 只有在启用自动定位时才移动地图视图
           if (autoLocate) {
-            setView(location, 16);
+            setView(location, appConfig.map.locateZoomLevel);
           }
         },
         (error) => {
@@ -117,6 +125,11 @@ export function useLocationTracking(autoLocate: boolean) {
             const accuracy = position.coords.accuracy;
             setUserLocation(location, accuracy);
             setLocationPermissionDenied(false);
+            
+            // 获取方向信息（如果支持）
+            if (position.coords.heading !== null && position.coords.heading !== undefined && onHeadingChange) {
+              onHeadingChange(position.coords.heading);
+            }
           },
           (error) => {
             console.warn('位置更新失败:', error.message);
@@ -132,8 +145,8 @@ export function useLocationTracking(autoLocate: boolean) {
           },
           {
             enableHighAccuracy: true,  // 启用高精度模式（GPS）
-            timeout: 15000,            // 15秒超时（持续监听可以设置更长）
-            maximumAge: 5000,          // 5秒缓存（减少GPS功耗）
+            timeout: appConfig.location.timeout + 5000,  // 持续监听可以设置更长
+            maximumAge: 0,  // 不使用缓存
           }
         );
       }
@@ -145,7 +158,7 @@ export function useLocationTracking(autoLocate: boolean) {
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [setView, setUserLocation, autoLocate, setLocationPermissionDenied, locationPermissionDenied]);
+  }, [setView, setUserLocation, autoLocate, setLocationPermissionDenied, locationPermissionDenied, onHeadingChange]);
 
   return {
     userLocation,

@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
-import { Result, Button, message } from 'antd';
+import { Result, Button } from 'antd';
+import { message } from '../utils/message';
 import { CopyOutlined } from '@ant-design/icons';
 import { isDevelopment } from '../utils/env';
 
