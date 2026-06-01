@@ -1,4 +1,5 @@
 import { Drawer } from 'antd';
+import { Capacitor } from '@capacitor/core';
 import type { ReactNode, CSSProperties } from 'react';
 
 interface BottomDrawerProps {
@@ -20,6 +21,7 @@ interface BottomDrawerProps {
   styles?: {
     body?: CSSProperties;
     wrapper?: CSSProperties;
+    header?: CSSProperties;
   };
   className?: string;
   destroyOnClose?: boolean;
@@ -40,13 +42,18 @@ export function BottomDrawer({
   className,
   destroyOnClose = false,
 }: BottomDrawerProps) {
+  // 判断是否为移动端
+  const isMobile = Capacitor.isNativePlatform();
+  // 移动端需要考虑安全区（24px）+ Header（64px）= 88px
+  const headerHeight = isMobile ? 88 : 64;
+
   // 默认样式：不覆盖标题栏
   const defaultWrapperStyle: CSSProperties = coverHeader
     ? {} // 覆盖标题栏时不设置 top
     : {
-        top: 64,
-        height: 'calc(100dvh - 64px)',
-        maxHeight: 'calc(100dvh - 64px)',
+        top: headerHeight,
+        height: `calc(100dvh - ${headerHeight}px)`,
+        maxHeight: `calc(100dvh - ${headerHeight}px)`,
       };
 
   const defaultBodyStyle: CSSProperties = {
@@ -69,6 +76,7 @@ export function BottomDrawer({
           ...defaultWrapperStyle,
           ...customStyles?.wrapper,
         },
+        header: customStyles?.header,
       }}
     >
       {children}

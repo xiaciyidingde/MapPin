@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLocationTracking } from './useLocationTracking';
-import { useMapStore } from '../store';
+import { useMapStore, useLocationStore } from '../store';
 import { message } from '../utils/message';
 
 // Mock appConfig
@@ -31,29 +31,33 @@ vi.mock('../utils/message', () => ({
 // Mock stores
 vi.mock('../store', () => ({
   useMapStore: vi.fn(),
+  useLocationStore: vi.fn(),
 }));
+
+// Mock locationService - 使用 vi.fn() 在 factory 内部创建
+vi.mock('../services/location/LocationService', () => ({
+  locationService: {
+    getCurrentPosition: vi.fn(),
+    watchPosition: vi.fn(),
+  },
+}));
+
+// 导入 mocked locationService 以便在测试中使用
+import { locationService } from '../services/location/LocationService';
 
 describe('useLocationTracking', () => {
   const mockSetView = vi.fn();
   const mockSetUserLocation = vi.fn();
   const mockSetLocationPermissionDenied = vi.fn();
-
-  // Mock geolocation
-  const mockGeolocation = {
-    getCurrentPosition: vi.fn(),
-    watchPosition: vi.fn(),
-    clearWatch: vi.fn(),
-  };
+  const mockSetCurrentPosition = vi.fn();
+  const mockSetLocationError = vi.fn();
+  const mockRemove = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Mock navigator.geolocation
-    Object.defineProperty(global.navigator, 'geolocation', {
-      value: mockGeolocation,
-      writable: true,
-      configurable: true,
-    });
+    // Mock watchPosition to return a remove function
+    vi.mocked(locationService.watchPosition).mockReturnValue({ remove: mockRemove });
 
     // Mock useMapStore
     vi.mocked(useMapStore).mockImplementation((selector: any) => {
@@ -66,6 +70,17 @@ describe('useLocationTracking', () => {
       };
       return selector(state);
     });
+
+    // Mock useLocationStore
+    vi.mocked(useLocationStore).mockImplementation((selector: any) => {
+      const state = {
+        currentPosition: null,
+        setCurrentPosition: mockSetCurrentPosition,
+        locationMode: 'gps',
+        setLocationError: mockSetLocationError,
+      };
+      return selector(state);
+    });
   });
 
   afterEach(() => {
@@ -73,21 +88,22 @@ describe('useLocationTracking', () => {
   });
 
   describe('初始化', () => {
-    it('应该在挂载时获取当前位置', () => {
+    it('应该在挂载时启动位置监听', () => {
       renderHook(() => useLocationTracking(false));
 
-      expect(mockGeolocation.getCurrentPosition).toHaveBeenCalled();
+      expect(locationService.watchPosition).toHaveBeenCalled();
     });
 
     it('应该在获取位置成功时更新状态', async () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((success) => {
-        success({
-          coords: {
-            latitude: 39.9,
-            longitude: 116.4,
-            accuracy: 10,
-          },
+      vi.mocked(locationService.watchPosition).mockImplementation((callback) => {
+        // 立即调用回调模拟位置更新
+        callback({
+          lat: 39.9,
+          lng: 116.4,
+          accuracy: 10,
+          timestamp: Date.now(),
         });
+        return { remove: mockRemove };
       });
 
       renderHook(() => useLocationTracking(false));
@@ -102,14 +118,14 @@ describe('useLocationTracking', () => {
     });
 
     it('应该在 autoLocate 为 true 时移动地图视图', async () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((success) => {
-        success({
-          coords: {
-            latitude: 39.9,
-            longitude: 116.4,
-            accuracy: 10,
-          },
+      vi.mocked(locationService.watchPosition).mockImplementation((callback) => {
+        callback({
+          lat: 39.9,
+          lng: 116.4,
+          accuracy: 10,
+          timestamp: Date.now(),
         });
+        return { remove: mockRemove };
       });
 
       renderHook(() => useLocationTracking(true));
@@ -120,14 +136,14 @@ describe('useLocationTracking', () => {
     });
 
     it('应该在 autoLocate 为 false 时不移动地图视图', async () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((success) => {
-        success({
-          coords: {
-            latitude: 39.9,
-            longitude: 116.4,
-            accuracy: 10,
-          },
+      vi.mocked(locationService.watchPosition).mockImplementation((callback) => {
+        callback({
+          lat: 39.9,
+          lng: 116.4,
+          accuracy: 10,
+          timestamp: Date.now(),
         });
+        return { remove: mockRemove };
       });
 
       renderHook(() => useLocationTracking(false));
@@ -139,55 +155,36 @@ describe('useLocationTracking', () => {
       expect(mockSetView).not.toHaveBeenCalled();
     });
 
-    it('应该在权限被拒绝时设置状态', async () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((_, error) => {
-        error({ code: 1, message: 'Permission denied', PERMISSION_DENIED: 1 });
+    it('应该在权限被拒绝时不启动监听', async () => {
+      vi.mocked(useMapStore).mockImplementation((selector: any) => {
+        const state = {
+          setView: mockSetView,
+          setUserLocation: mockSetUserLocation,
+          userLocation: null,
+          locationPermissionDenied: true,
+          setLocationPermissionDenied: mockSetLocationPermissionDenied,
+        };
+        return selector(state);
       });
 
       renderHook(() => useLocationTracking(false));
 
-      await waitFor(() => {
-        expect(mockSetLocationPermissionDenied).toHaveBeenCalledWith(true);
-      });
+      // 当权限被拒绝时，不应该调用 watchPosition
+      expect(locationService.watchPosition).not.toHaveBeenCalled();
     });
 
     it('应该启动位置监听', () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((success) => {
-        success({
-          coords: {
-            latitude: 39.9,
-            longitude: 116.4,
-            accuracy: 10,
-          },
-        });
-      });
-
-      mockGeolocation.watchPosition.mockReturnValue(123);
-
       renderHook(() => useLocationTracking(false));
 
-      expect(mockGeolocation.watchPosition).toHaveBeenCalled();
+      expect(locationService.watchPosition).toHaveBeenCalled();
     });
 
     it('应该在卸载时清除位置监听', () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((success) => {
-        success({
-          coords: {
-            latitude: 39.9,
-            longitude: 116.4,
-            accuracy: 10,
-          },
-        });
-      });
-
-      const watchId = 123;
-      mockGeolocation.watchPosition.mockReturnValue(watchId);
-
       const { unmount } = renderHook(() => useLocationTracking(false));
 
       unmount();
 
-      expect(mockGeolocation.clearWatch).toHaveBeenCalledWith(watchId);
+      expect(mockRemove).toHaveBeenCalled();
     });
   });
 
@@ -226,49 +223,34 @@ describe('useLocationTracking', () => {
       vi.useRealTimers();
     });
 
-    it('应该在没有用户位置时获取新位置', () => {
-      mockGeolocation.getCurrentPosition.mockImplementation((success) => {
-        success({
-          coords: {
-            latitude: 39.9,
-            longitude: 116.4,
-            accuracy: 10,
-          },
-        });
+    it('应该在没有用户位置时获取新位置', async () => {
+      vi.mocked(locationService.getCurrentPosition).mockResolvedValue({
+        lat: 39.9,
+        lng: 116.4,
+        accuracy: 10,
+        timestamp: Date.now(),
       });
 
       const { result } = renderHook(() => useLocationTracking(false));
 
-      act(() => {
-        result.current.handleLocate();
+      await act(async () => {
+        await result.current.handleLocate();
       });
 
-      expect(mockGeolocation.getCurrentPosition).toHaveBeenCalled();
+      expect(locationService.getCurrentPosition).toHaveBeenCalled();
+      expect(mockSetUserLocation).toHaveBeenCalledWith(
+        { lat: 39.9, lng: 116.4 },
+        10
+      );
     });
 
     it('应该在权限被拒绝时显示错误消息', async () => {
-      mockGeolocation.getCurrentPosition
-        .mockImplementationOnce((success) => {
-          success({
-            coords: {
-              latitude: 39.9,
-              longitude: 116.4,
-              accuracy: 10,
-            },
-          });
-        })
-        .mockImplementationOnce((_, error) => {
-          error({
-            code: 1,
-            message: 'Permission denied',
-            PERMISSION_DENIED: 1,
-          });
-        });
+      vi.mocked(locationService.getCurrentPosition).mockRejectedValue(new Error('定位权限被拒绝'));
 
       const { result } = renderHook(() => useLocationTracking(false));
 
-      act(() => {
-        result.current.handleLocate();
+      await act(async () => {
+        await result.current.handleLocate();
       });
 
       await waitFor(() => {
@@ -282,28 +264,12 @@ describe('useLocationTracking', () => {
     });
 
     it('应该在超时时显示警告消息', async () => {
-      mockGeolocation.getCurrentPosition
-        .mockImplementationOnce((success) => {
-          success({
-            coords: {
-              latitude: 39.9,
-              longitude: 116.4,
-              accuracy: 10,
-            },
-          });
-        })
-        .mockImplementationOnce((_, error) => {
-          error({
-            code: 3,
-            message: 'Timeout',
-            TIMEOUT: 3,
-          });
-        });
+      vi.mocked(locationService.getCurrentPosition).mockRejectedValue(new Error('定位超时'));
 
       const { result } = renderHook(() => useLocationTracking(false));
 
-      act(() => {
-        result.current.handleLocate();
+      await act(async () => {
+        await result.current.handleLocate();
       });
 
       await waitFor(() => {
@@ -314,28 +280,12 @@ describe('useLocationTracking', () => {
     });
 
     it('应该在其他错误时显示通用错误消息', async () => {
-      mockGeolocation.getCurrentPosition
-        .mockImplementationOnce((success) => {
-          success({
-            coords: {
-              latitude: 39.9,
-              longitude: 116.4,
-              accuracy: 10,
-            },
-          });
-        })
-        .mockImplementationOnce((_, error) => {
-          error({
-            code: 2,
-            message: 'Position unavailable',
-            POSITION_UNAVAILABLE: 2,
-          });
-        });
+      vi.mocked(locationService.getCurrentPosition).mockRejectedValue(new Error('无法获取位置信息'));
 
       const { result } = renderHook(() => useLocationTracking(false));
 
-      act(() => {
-        result.current.handleLocate();
+      await act(async () => {
+        await result.current.handleLocate();
       });
 
       await waitFor(() => {

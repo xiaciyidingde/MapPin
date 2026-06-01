@@ -5,20 +5,60 @@
 import { message as antMessage } from 'antd';
 import { appConfig } from '../config/appConfig';
 
+type MessageApi = Pick<typeof antMessage, 'success' | 'error' | 'warning' | 'info' | 'loading' | 'destroy'>;
+type MessageContent = Parameters<MessageApi['success']>[0];
+type MessageDuration = Parameters<MessageApi['success']>[1];
+
+let boundMessageApi: MessageApi | null = null;
+
+export function bindMessageApi(api: MessageApi | null) {
+  boundMessageApi = api;
+}
+
+function getMessageApi(): MessageApi {
+  return boundMessageApi ?? antMessage;
+}
+
 export const message = {
-  success: (content: string, duration?: number) => {
-    return antMessage.success(content, duration ?? appConfig.ui.messageDisplayDuration / 1000);
+  success: (content: MessageContent, duration?: MessageDuration) => {
+    const finalDuration = duration ?? getDefaultDuration(content);
+    return finalDuration === undefined
+      ? getMessageApi().success(content)
+      : getMessageApi().success(content, finalDuration);
   },
-  error: (content: string, duration?: number) => {
-    return antMessage.error(content, duration ?? appConfig.ui.messageDisplayDuration / 1000);
+  error: (content: MessageContent, duration?: MessageDuration) => {
+    const finalDuration = duration ?? getDefaultDuration(content);
+    return finalDuration === undefined
+      ? getMessageApi().error(content)
+      : getMessageApi().error(content, finalDuration);
   },
-  warning: (content: string, duration?: number) => {
-    return antMessage.warning(content, duration ?? appConfig.ui.messageDisplayDuration / 1000);
+  warning: (content: MessageContent, duration?: MessageDuration) => {
+    const finalDuration = duration ?? getDefaultDuration(content);
+    return finalDuration === undefined
+      ? getMessageApi().warning(content)
+      : getMessageApi().warning(content, finalDuration);
   },
-  info: (content: string, duration?: number) => {
-    return antMessage.info(content, duration ?? appConfig.ui.messageDisplayDuration / 1000);
+  info: (content: MessageContent, duration?: MessageDuration) => {
+    const finalDuration = duration ?? getDefaultDuration(content);
+    return finalDuration === undefined
+      ? getMessageApi().info(content)
+      : getMessageApi().info(content, finalDuration);
   },
-  loading: (content: string, duration?: number) => {
-    return antMessage.loading(content, duration ?? 0);
+  loading: (content: Parameters<MessageApi['loading']>[0], duration?: Parameters<MessageApi['loading']>[1]) => {
+    const finalDuration = duration ?? getDefaultLoadingDuration(content);
+    return finalDuration === undefined
+      ? getMessageApi().loading(content)
+      : getMessageApi().loading(content, finalDuration);
+  },
+  destroy: (key?: Parameters<MessageApi['destroy']>[0]) => {
+    return getMessageApi().destroy(key);
   },
 };
+
+function getDefaultDuration(content: MessageContent): MessageDuration | undefined {
+  return typeof content === 'string' ? appConfig.ui.messageDisplayDuration / 1000 : undefined;
+}
+
+function getDefaultLoadingDuration(content: Parameters<MessageApi['loading']>[0]) {
+  return typeof content === 'string' ? 0 : undefined;
+}

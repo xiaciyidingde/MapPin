@@ -6,7 +6,15 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores([
+    'dist',
+    'coverage',
+    // Capacitor / Android 构建产物（含 native-bridge.js 等不应 lint 的代码）
+    'android/app/build/**',
+    'android/build/**',
+    // Capacitor cap sync 同步到 Android 项目下的 web 资产
+    'android/app/src/main/assets/public/**',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

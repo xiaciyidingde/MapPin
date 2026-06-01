@@ -11,6 +11,7 @@ import { FitViewControl } from './FitViewControl';
 import { MeasureTool, type MeasureToolRef } from './MeasureTool';
 import { GridLayer } from './GridLayer';
 import { OptimizedMarker } from './OptimizedMarker';
+import { LocationStatusIndicator } from '../Location/LocationStatusIndicator';
 import { getMapTileUrl, getAnnotationLayerUrl, MAP_TILE_SOURCES, switchToNextToken } from '../../config/mapTileSources';
 import type { MeasurementPoint } from '../../types';
 import type { Marker as LeafletMarker } from 'leaflet';
@@ -180,7 +181,6 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
   const setSearchMarker = useMapStore((state) => state.setSearchMarker);
   const codeFilter = useMapStore((state) => state.codeFilter);
   const points = useDataStore((state) => state.points);
-  const locationPermissionDenied = useMapStore((state) => state.locationPermissionDenied);
   
   // 地图设置
   const showUserLocation = useSettingsStore((state) => state.showUserLocation);
@@ -500,15 +500,7 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       )}
       
       {showGridLayer && (
-        <div 
-          style={{ 
-            opacity: baseMapMode === 'grid' ? 1 : 0,
-            transition: 'opacity 300ms ease-in-out',
-            pointerEvents: baseMapMode === 'grid' ? 'auto' : 'none'
-          }}
-        >
-          <GridLayer />
-        </div>
+        <GridLayer />
       )}
 
       {shouldCluster ? (
@@ -677,26 +669,8 @@ export function MapView({ measureActive = false }: { measureActive?: boolean }) 
       />
     </MapContainer>
 
-      {/* 右上角定位精度指示器 */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          zIndex: 1000,
-          color: '#595959',
-          fontSize: 14,
-          fontWeight: 500,
-          pointerEvents: 'none',
-          textShadow: '0 0 3px white, 0 0 3px white, 0 0 3px white',
-        }}
-      >
-        {locationPermissionDenied ? (
-          <span>定位精度：无权限</span>
-        ) : userLocationAccuracy !== null ? (
-          <span>定位精度：±{userLocationAccuracy.toFixed(1)} 米</span>
-        ) : null}
-      </div>
+      {/* 定位状态指示器（原生平台） */}
+      {import.meta.env.MODE !== 'web' && <LocationStatusIndicator />}
     </div>
   );
 }

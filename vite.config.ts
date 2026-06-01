@@ -6,21 +6,20 @@ import viteCompression from 'vite-plugin-compression'
 export default defineConfig({
   plugins: [
     react(),
-    // Gzip 压缩
-    viteCompression({
+    // 只在 Web 构建时启用压缩
+    process.env.BUILD_TARGET !== 'android' && viteCompression({
       algorithm: 'gzip',
       ext: '.gz',
       threshold: 10240,
       deleteOriginFile: false,
     }),
-    // Brotli 压缩
-    viteCompression({
+    process.env.BUILD_TARGET !== 'android' && viteCompression({
       algorithm: 'brotliCompress',
       ext: '.br',
       threshold: 10240,
       deleteOriginFile: false,
     }),
-  ],
+  ].filter(Boolean),
   build: {
     minify: 'terser',
     terserOptions: {

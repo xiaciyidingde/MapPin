@@ -1,4 +1,6 @@
 /**
  * 应用版本信息
  */
-export const VERSION = '1.2.8.0';
+import packageJson from '../package.json';
+
+export const VERSION = packageJson.version;

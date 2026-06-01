@@ -1,6 +1,8 @@
-import { useState, lazy, Suspense, useRef } from 'react';
+import { useState, lazy, Suspense, useRef, useEffect } from 'react';
 import { Layout, Button, FloatButton, Spin, Tabs, ConfigProvider, App as AntApp, theme } from 'antd';
 import { FileTextOutlined, AimOutlined, SettingOutlined, ColumnWidthOutlined, ToolOutlined, AppstoreOutlined, GlobalOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { UploadZone } from './components/FileUpload/UploadZone';
 import { FileList } from './components/FileUpload/FileList';
 import { Statistics } from './components/DataPanel/Statistics';
@@ -16,6 +18,7 @@ import { useLocationTracking } from './hooks/useLocationTracking';
 import { useTitleAnimation } from './hooks/useTitleAnimation';
 import { useDataLoader } from './hooks/useDataLoader';
 import { lightTheme, darkTheme } from './themes';
+import { bindMessageApi } from './utils/message';
 import './App.css';
 
 // 懒加载非首屏组件
@@ -30,6 +33,33 @@ const { Header, Content } = Layout;
 function App() {
   // 测量工具状态
   const [measureActive, setMeasureActive] = useState(false);
+
+  // 地图设置
+  const themeMode = useMapStore((state) => state.theme);
+
+  // 设置 Android 状态栏样式（根据主题自动调整）
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      // 根据主题设置状态栏颜色
+      const isDark = themeMode === 'dark';
+      
+      StatusBar.setBackgroundColor({ 
+        color: isDark ? '#141414' : '#ffffff' 
+      }).catch(err => {
+        console.warn('无法设置状态栏背景色:', err);
+      });
+
+      StatusBar.setStyle({ 
+        style: isDark ? Style.Dark : Style.Light
+      }).catch(err => {
+        console.warn('无法设置状态栏样式:', err);
+      });
+
+      StatusBar.show().catch(err => {
+        console.warn('无法显示状态栏:', err);
+      });
+    }
+  }, [themeMode]);
 
   // 使用自定义 Hooks
   const {
@@ -54,7 +84,6 @@ function App() {
   const autoLocate = useSettingsStore((state) => state.autoLocate);
   const baseMapMode = useMapStore((state) => state.baseMapMode);
   const setBaseMapMode = useMapStore((state) => state.setBaseMapMode);
-  const themeMode = useMapStore((state) => state.theme);
   
   // 位置追踪
   const { handleLocate } = useLocationTracking(autoLocate);
@@ -70,7 +99,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ConfigProvider theme={themeMode === 'dark' ? darkTheme : lightTheme}>
-        <AntApp>
+        <AntApp message={{ top: Capacitor.isNativePlatform() ? 88 : 64 }}>
           <AppContent 
             themeMode={themeMode}
             measureActive={measureActive}
@@ -153,6 +182,13 @@ function AppContent({
   const { message } = AntApp.useApp();
   const settingsButtonRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    bindMessageApi(message);
+  }, [message]);
+
+  // 判断是否为移动端
+  const isMobile = Capacitor.isNativePlatform();
+
   // 打开工具抽屉时的提示
   const handleToolsClick = () => {
     if (!_currentFileId) {
@@ -166,6 +202,19 @@ function AppContent({
     <div data-theme={themeMode}>
       <NetworkStatus />
       <Layout className="min-h-screen">
+        {/* 移动端顶部安全区（状态栏占位） */}
+        {isMobile && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '24px',
+            backgroundColor: token.colorBgContainer,
+            zIndex: 1002,
+          }} />
+        )}
+
         {/* 移动端顶部导航栏 */}
         <Header style={{ 
           background: token.colorBgContainer,
@@ -175,7 +224,7 @@ function AppContent({
           justifyContent: 'space-between',
           padding: '0 16px',
           position: 'fixed',
-          top: 0,
+          top: isMobile ? '24px' : 0,
           left: 0,
           right: 0,
           zIndex: 1001,
@@ -267,7 +316,10 @@ function AppContent({
       </Header>
 
       {/* 地图主体 - 全屏显示 */}
-      <Content className="relative" style={{ marginTop: 64, height: 'calc(100dvh - 64px)' }}>
+      <Content className="relative" style={{ 
+        marginTop: isMobile ? 88 : 64, 
+        height: isMobile ? 'calc(100dvh - 88px)' : 'calc(100dvh - 64px)' 
+      }}>
         <MapView measureActive={measureActive} />
       </Content>
 
@@ -315,8 +367,8 @@ function AppContent({
         styles={{
           body: { 
             padding: 0, 
-            height: 'calc(100vh - 64px - 55px)', 
-            maxHeight: 'calc(100dvh - 64px - 55px)', 
+            height: isMobile ? 'calc(100vh - 88px - 55px)' : 'calc(100vh - 64px - 55px)', 
+            maxHeight: isMobile ? 'calc(100dvh - 88px - 55px)' : 'calc(100dvh - 64px - 55px)', 
             display: 'flex', 
             flexDirection: 'column' 
           }
@@ -369,6 +421,9 @@ function AppContent({
         open={isDrawerOpen('settings')}
         onClose={closeDrawer}
         destroyOnClose={true}
+        styles={{
+          header: { paddingLeft: 24, paddingRight: 24 }
+        }}
       >
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}><Spin size="large" /></div>}>
           <SettingsDrawer
