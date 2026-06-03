@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Form, Input, InputNumber, App, Button, Space, Select, Radio } from 'antd';
-import { AimOutlined } from '@ant-design/icons';
+import { AimOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
-import { useDataStore, useMapStore } from '../../store';
+import { Capacitor } from '@capacitor/core';
+import { useDataStore, useMapStore, useCORSStore } from '../../store';
 import { validatePointNumber } from '../../utils/pointValidation';
 import { convertCoordinatesForFile } from '../../utils/coordinateUtils';
 import { useNextPointNumber } from '../../hooks/useNextPointNumber';
@@ -18,7 +19,7 @@ interface AddPointFormProps {
 }
 
 export function AddPointForm({ onClose }: AddPointFormProps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [coordinateFormat, setCoordinateFormat] = useState<CoordinateFormat>('dd');
@@ -34,6 +35,10 @@ export function AddPointForm({ onClose }: AddPointFormProps) {
   const files = useDataStore((state) => state.files);
   const addPoint = useDataStore((state) => state.addPoint);
   const recalculateFileStats = useDataStore((state) => state.recalculateFileStats);
+
+  // CORS store - 用于 RTK 精度检查
+  const connectionStatus = useCORSStore((state) => state.connectionStatus);
+  const rtkStatus = useCORSStore((state) => state.rtkStatus);
 
   // 缓存当前文件
   const currentFile = useMemo(
@@ -129,6 +134,73 @@ export function AddPointForm({ onClose }: AddPointFormProps) {
 
   // 处理添加
   const handleAdd = async () => {
+    if (!currentFileId) {
+      message.warning('请先打开文件');
+      return;
+    }
+
+    // RTK 精度检查弹窗已注释
+    // 原因：当前设备多数无载波相位 (ADR)，永远到不了 FIXED；DGPS 精度对一般测绘已足够。
+    // 待后续完善高精度判定（DGPS/FLOAT/FIXED）后再启用。
+    if (Capacitor.isNativePlatform() && connectionStatus === 'connected' && rtkStatus) {
+      // 高精度模式：FIXED（厘米级）、FLOAT（亚米级）、DGPS（米级）
+      const isHighAccuracy = ['FIXED', 'FLOAT', 'DGPS'].includes(rtkStatus.fixType);
+      
+      if (!isHighAccuracy) {
+        // 低精度模式，弹窗确认
+        const fixTypeText: Record<string, string> = {
+          NONE: '无定位',
+          SPP: 'GPS单点定位',
+          DGPS: '差分定位',
+          FLOAT: 'RTK浮动解',
+          FIXED: 'RTK固定解',
+          SBAS: 'SBAS定位',
+          PPP: 'PPP定位',
+          DR: '航迹推算',
+        };
+
+        const accuracyText: Record<string, string> = {
+          NONE: '-',
+          SPP: '±5-10m',
+          DGPS: '±1-3m',
+          FLOAT: '±0.2-0.5m',
+          FIXED: '±0.01-0.05m',
+          SBAS: '±1-3m',
+          PPP: '±0.1m',
+          DR: '±10m+',
+        };
+
+        const fixType = fixTypeText[rtkStatus.fixType] || '未知';
+        const accuracy = accuracyText[rtkStatus.fixType] || '-';
+
+        modal.confirm({
+          title: '定位精度提示',
+          icon: <ExclamationCircleOutlined />,
+          content: (
+            <div>
+              <p>当前定位模式为 <strong>{fixType}</strong>，精度可能不够。</p>
+              <p style={{ marginTop: 8 }}>
+                <strong>当前精度：</strong>{accuracy}
+              </p>
+              <p style={{ marginTop: 8, color: '#52c41a' }}>
+                <strong>建议：</strong>等待差分定位（DGPS/FLOAT/FIXED）
+              </p>
+            </div>
+          ),
+          okText: '继续采集',
+          cancelText: '取消',
+          onOk: () => performAdd(),
+        });
+        return;
+      }
+    }
+
+    // 高精度模式或 Web 平台，直接添加
+    await performAdd();
+  };
+
+  // 执行添加操作
+  const performAdd = async () => {
     if (!currentFileId) {
       message.warning('请先打开文件');
       return;

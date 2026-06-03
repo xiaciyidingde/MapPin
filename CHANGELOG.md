@@ -1,5 +1,149 @@
 # 更新日志
 
+## [v1.3.0.0] - 2026-05-30
+
+### 🎉 重大更新：Android 平台支持
+
+> **里程碑版本**：MapPin 首次支持 Android 平台，实现从纯 Web 应用到跨平台应用的转变。
+
+> **⚠️ 注意**：RTK 定位功能目前处于开发阶段，大部分 Android 设备不支持载波相位测量。
+
+### Android 原生开发
+
+#### Capacitor 集成
+- **平台支持**
+  - 集成 Capacitor 跨平台框架
+  - 创建 Android 原生项目（com.mappin.app）
+  - 配置应用信息、启动屏幕、状态栏
+  - 支持 Web 和 Android 双平台构建
+
+#### 原生插件开发
+- **RTKPlugin** - Capacitor 插件入口
+  - 暴露给 JS 端的统一接口
+  - 管理 RTKProcessor 生命周期
+  - 处理 PluginCall 的 resolve/reject
+
+- **RTKProcessor** - RTK 处理核心
+  - GNSS 原始数据采集
+  - NTRIP 基站连接管理
+  - RTKLIB 解算调用
+  - 星历下载管理（待完善）
+
+- **NTRIPClient** - NTRIP 客户端
+  - 连接 CORS 基站
+  - 接收 RTCM 差分数据
+  - 自动重连机制
+
+- **EphemerisDownloader** - 星历下载器
+  - CAS Ultra-rapid SP3（小时级实时）
+  - WHU MGEX SP3（备份）
+  - BRDC 广播星历（兜底）
+  - 自动保存到持久化存储
+
+- **RTKLibWrapper** - RTKLIB JNI 封装
+  - 加载星历数据（SP3/NAV）
+  - 执行 RTK 解算
+  - 返回定位结果
+
+- **OfflineDebugCollectorPlugin** - 离线调试数据收集(未完成)
+  - 收集 GNSS 原始观测数据
+  - 收集 RTCM 基站数据
+  - 复制星历文件
+  - 打包成 ZIP 导出
+  - `tools/obs2rinex.py` 转换工具（自定义格式 → RINEX 3.04）
+
+- **LogCollectorPlugin** - 日志收集
+  - 收集应用日志
+  - 打包导出
+
+#### RTKLIB 集成
+- **C/C++ 原生库**
+  - 集成 RTKLIB 2.4.3 核心算法
+  - CMake 构建配置
+  - JNI 接口封装
+  - 支持 armeabi-v7a 和 arm64-v8a 架构
+  - 支持 GPS/GLONASS/Galileo/BeiDou/QZSS
+
+### 前端架构升级
+
+#### 定位框架
+- **统一定位策略接口** (`ILocationStrategy`)
+  - GPS 定位策略（完整实现）
+  - CORS RTK 定位策略（待完善）
+  - 支持多种定位方式灵活切换
+
+- **定位服务层** (`LocationService`)
+  - 门面模式统一定位服务
+  - 自动选择最佳定位策略
+  - 策略注册和管理
+  - 单例模式全局访问
+
+#### 状态管理增强
+- **useLocationStore** - 定位状态管理
+  - 当前位置、定位模式
+  - 轨迹记录、位置历史
+  - 定位精度信息
+
+- **useCORSStore** - CORS 状态管理
+  - CORS 配置管理（增删改查）
+  - 连接状态、RTK 状态
+  - 卫星信息、星历状态
+  - 配置持久化
+
+### 功能增强
+
+#### UI 组件
+- **CORSManager** - CORS 基站管理界面
+  - 基站配置增删改查
+  - 连接状态监控
+  - 一键连接/断开
+
+- **RTKIndicator** - RTK 状态指示器
+  - 实时显示定位类型
+  - 卫星数量、星历状态
+  - 连接状态、精度信息
+
+- **LocationStatusIndicator** - 定位状态指示器
+  - 当前位置显示
+  - 定位精度显示
+  - 定位模式切换
+
+### 构建系统
+
+#### 构建脚本
+- `build:web` - 构建 Web 版本
+- `build:android` - 构建并同步 Android
+- `android:dev` - 在设备/模拟器运行
+- `android:open` - 打开 Android Studio
+- `sync` - 同步资源到原生项目
+
+#### 统一版本号源
+- 统一版本号来源：以 `package.json` 为唯一版本源
+
+#### GitHub Actions
+- 新增 Android 构建工作流
+- 支持标签触发 `v1.3.0-android`
+- 自动构建 APK 并发布到 Release
+
+
+### 已知限制
+
+#### 未完善功能
+- CORS RTK 定位策略完整实现
+- 蓝牙 RTK 设备支持
+- RTK 固定解
+- 多频多系统 GNSS 支持优化
+- 实时轨迹记录和回放
+
+#### 技术限制
+- 大部分 Android 设备不支持载波相位测量
+- 无法达到 RTK 固定解
+- DGPS/FLOAT 为实际可达到的最高精度
+- 部分设备不支持 GNSS 导航消息
+- 采点精度判定：接受 FIXED、FLOAT、DGPS 三种模式
+
+---
+
 ## [v1.2.8.0] - 2026-05-29
 
 ### 新增功能

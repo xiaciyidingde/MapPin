@@ -33,15 +33,15 @@ npm run test:integration
 echo "[SUCCESS] Integration tests passed"
 echo ""
 
-echo "5. Run Production Build"
+echo "5. Build Android (includes frontend build and sync)"
 echo "======================================================================================================"
-npm run build
-echo "[SUCCESS] Production build completed"
+npm run build:android
+echo "[SUCCESS] Android build completed"
 echo ""
 
 echo "======================================================================================================"
 echo "All tests and checks completed!"
 echo "======================================================================================================"
 echo "Test coverage report: coverage/index.html (run 'npm run test:coverage' to generate)"
-echo "Build output directory: dist/"
+echo "Android build output: android/app/build/outputs/"
 echo "======================================================================================================"

@@ -47,6 +47,10 @@ interface MapStore {
   baseMapMode: 'map' | 'grid';
   setBaseMapMode: (mode: 'map' | 'grid') => void;
 
+  // 网格间距（米）
+  gridInterval: number;
+  setGridInterval: (interval: number) => void;
+
   // 主题模式
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
@@ -77,6 +81,7 @@ export const useMapStore = create<MapStore>()(
       measureMode: false,
       measurePoints: [],
       baseMapMode: 'map', // 默认使用地图模式
+      gridInterval: 100, // 默认网格间距 100m
       theme: 'light', // 默认浅色主题
       themeAnimation: 'simple', // 默认简单动画
       codeFilter: [], // 默认不启用编码过滤
@@ -98,6 +103,7 @@ export const useMapStore = create<MapStore>()(
         })),
       clearMeasurePoints: () => set({ measurePoints: [] }),
       setBaseMapMode: (mode) => set({ baseMapMode: mode }),
+      setGridInterval: (interval) => set({ gridInterval: interval }),
       setTheme: (theme) => set({ theme }),
       setThemeAnimation: (animation) => set({ themeAnimation: animation }),
       setCodeFilter: (codes) => set({ codeFilter: codes }),

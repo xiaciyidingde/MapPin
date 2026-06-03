@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useMapStore } from '../../store/useMapStore';
 
 /**
  * 根据缩放级别自动选择合适的网格间距
@@ -140,18 +141,24 @@ class CustomGridLayer extends L.GridLayer {
 
 export function GridLayer() {
   const map = useMap();
-  const [gridInterval, setGridInterval] = useState(100);
+  const setGridInterval = useMapStore((state) => state.setGridInterval);
 
   useEffect(() => {
     if (!map) return;
+
+    // 创建专用的网格图层 pane，确保在所有底图之上
+    if (!map.getPane('gridPane')) {
+      const gridPane = map.createPane('gridPane');
+      gridPane.style.zIndex = '650'; // 高于 TilePane (200) 和 overlayPane (400)
+    }
 
     // 创建自定义网格图层
     const gridLayer = new CustomGridLayer({
       tileSize: 512, // 减少瓦片数量
       opacity: 1,
-      zIndex: 400,
+      pane: 'gridPane', // 使用专用 pane
       onIntervalChange: (interval) => {
-        setGridInterval(interval);
+        setGridInterval(interval); // 同步到 store
       },
     });
 
@@ -162,28 +169,8 @@ export function GridLayer() {
     return () => {
       map.removeLayer(gridLayer);
     };
-  }, [map]);
+  }, [map, setGridInterval]);
 
-  // 渲染网格间距显示
-  const intervalText = gridInterval >= 1000 
-    ? `${(gridInterval / 1000).toFixed(1)}km` 
-    : `${gridInterval}m`;
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '32px',
-        right: '10px',
-        zIndex: 1000,
-        fontSize: '14px',
-        fontWeight: 500,
-        color: '#595959',
-        textShadow: '0 0 3px white, 0 0 3px white, 0 0 3px white',
-        pointerEvents: 'none',
-      }}
-    >
-      网格间距: {intervalText}
-    </div>
-  );
+  // 不再单独渲染，由 LocationStatusIndicator 统一显示
+  return null;
 }

@@ -16,6 +16,10 @@ body {
 .custom-marker-icon {
   background: transparent;
   border: none;
+  /* GPU 加速优化 - 减少缩放时的重绘 */
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Leaflet map container */
@@ -450,6 +454,17 @@ html[data-theme-animation="triple"] ::view-transition-new(root) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* GPU 加速优化 - 减少缩放时的重绘 */
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.marker-with-label svg {
+  /* SVG 图标优化 */
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .marker-label {

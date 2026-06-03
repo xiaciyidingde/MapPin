@@ -27,3 +27,37 @@ coverage
 
 1.mydata/*
 
+# Capacitor
+android/app/build
+android/app/release
+android/.gradle
+android/build
+android/local.properties
+android/.idea
+android/*.iml
+android/captures
+android/.externalNativeBuild
+android/.cxx
+ios/App/build
+ios/App/Pods
+ios/App/Podfile.lock
+
+# Android 签名密钥
+*.jks
+*.jks.gpg
+*.keystore
+*.base64
+*base64.txt
+keystore.properties
+keystore-encrypted-base64.txt
+
+# 构建产物
+dist-web.zip
+
+# Windows 系统文件
+Thumbs.db
+desktop.ini
+
+# macOS 系统文件
+.AppleDouble
+.LSOverride

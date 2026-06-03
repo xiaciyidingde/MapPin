@@ -47,19 +47,19 @@ if %errorlevel% neq 0 (
 echo [SUCCESS] Integration tests passed
 echo.
 
-echo 5. Run Production Build
+echo 5. Build Android (includes frontend build and sync)
 echo ======================================================================================================
-call npm run build
+call npm run build:android
 if %errorlevel% neq 0 (
-    echo [ERROR] Production build failed
+    echo [ERROR] Android build failed
     exit /b 1
 )
-echo [SUCCESS] Production build completed
+echo [SUCCESS] Android build completed
 echo.
 
 echo ======================================================================================================
 echo All tests and checks completed!
 echo ======================================================================================================
 echo Test coverage report: coverage/index.html (run 'npm run test:coverage' to generate)
-echo Build output directory: dist/
+echo Android build output: android/app/build/outputs/
 echo ======================================================================================================
